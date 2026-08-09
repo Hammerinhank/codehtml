@@ -1,18 +1,196 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pour manipuler du code html</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background:#f5f5f7; color:#1d1d1f; text-align:center; padding:60px 20px; }
-  h1 { color:#0071e3; }
-  p { color:#86868b; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Éditeur & Prévisualisation HTML</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 15px;
+            gap: 15px;
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            background: #ffffff;
+            border: 1px solid #dcdfe6;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .toolbar {
+            background: #eef2f7;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #dcdfe6;
+        }
+
+        .toolbar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #4a5568;
+        }
+
+        button {
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: #2b6cb0;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 15px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            background: #fafafa;
+        }
+
+        .wysiwyg {
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+            overflow-y: auto;
+            outline: none;
+            background: #ffffff;
+        }
+
+        /* Message temporaire de confirmation */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2f855a;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
-<h1>Pour manipuler du code html</h1>
-<p>Nouvelle application créée avec Le Déployeur.</p>
-<p>Déploie ton code depuis l'étape 3 pour remplacer cette page.</p>
+
+    <!-- Section 1 : Éditeur de code HTML -->
+    <div class="section">
+        <div class="toolbar">
+            <h2>Source HTML (Éditable)</h2>
+            <button onclick="copySourceHTML()">Copier le code HTML</button>
+        </div>
+        <textarea id="htmlSource" placeholder="Saisissez ou collez votre code HTML ici..."></textarea>
+    </div>
+
+    <!-- Section 2 : Aperçu visuel éditable (WYSIWYG) -->
+    <div class="section">
+        <div class="toolbar">
+            <h2>Aperçu Visuel (Éditable)</h2>
+            <button onclick="copyRichText()">Copier le texte rendu (Riche)</button>
+        </div>
+        <div id="htmlVisual" class="wysiwyg" contenteditable="true"></div>
+    </div>
+
+    <div id="toast" class="toast">Copié dans le presse-papier !</div>
+
+    <script>
+        const htmlSource = document.getElementById('htmlSource');
+        const htmlVisual = document.getElementById('htmlVisual');
+        const toast = document.getElementById('toast');
+
+        // Exemple de contenu initial
+        const initialContent = `<h3>Titre d'exemple</h3>\n<p>Ceci est un texte en <strong>gras</strong> et en <em>italique</em>.</p>\n<ul>\n  <li>Élément 1</li>\n  <li>Élément 2</li>\n</ul>`;
+        htmlSource.value = initialContent;
+        htmlVisual.innerHTML = initialContent;
+
+        // Synchronisation : Code HTML -> Aperçu Visuel
+        htmlSource.addEventListener('input', () => {
+            htmlVisual.innerHTML = htmlSource.value;
+        });
+
+        // Synchronisation : Aperçu Visuel -> Code HTML
+        htmlVisual.addEventListener('input', () => {
+            htmlSource.value = htmlVisual.innerHTML;
+        });
+
+        // Notification visuelle de copie
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // Bouton 1 : Copie le code brut (HTML)
+        async function copySourceHTML() {
+            try {
+                await navigator.clipboard.writeText(htmlSource.value);
+                showToast("Code HTML brut copié !");
+            } catch (err) {
+                console.error('Erreur de copie :', err);
+            }
+        }
+
+        // Bouton 2 : Copie le rendu formaté (Presse-papier HTML / Texte enrichi)
+        async function copyRichText() {
+            try {
+                const htmlContent = htmlVisual.innerHTML;
+                const textContent = htmlVisual.innerText;
+
+                const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+                const blobText = new Blob([textContent], { type: 'text/plain' });
+
+                const item = new ClipboardItem({
+                    'text/html': blobHtml,
+                    'text/plain': blobText
+                });
+
+                await navigator.clipboard.write(item);
+                showToast("Rendu visuel copié !");
+            } catch (err) {
+                console.error('Erreur lors de la copie riche :', err);
+            }
+        }
+    </script>
 </body>
 </html>
