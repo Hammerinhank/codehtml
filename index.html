@@ -2,15 +2,13 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Éditeur & Prévisualisation HTML</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            /* Empêche le comportement de zoom/sélection indésirable lors du double-tap rapide sur iOS */
-            touch-action: manipulation;
         }
 
         body {
@@ -34,10 +32,9 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             overflow: hidden;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            user-select: none; /* Améliore la réactivité du double-tap */
         }
 
-        /* Classe activée lors du passage en plein écran */
+        /* Mode plein écran */
         .section.fullscreen {
             position: fixed !important;
             top: 0 !important;
@@ -58,6 +55,8 @@
             align-items: center;
             border-bottom: 1px solid #dcdfe6;
             cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
         }
 
         .toolbar h2 {
@@ -120,7 +119,6 @@
             resize: none;
             outline: none;
             background: #fafafa;
-            user-select: text;
         }
 
         .wysiwyg {
@@ -130,7 +128,6 @@
             overflow-y: auto;
             outline: none;
             background: #ffffff;
-            user-select: text;
         }
 
         /* Troisième fenêtre : Texte entièrement noir, poids normal, pas d'italique */
@@ -176,7 +173,7 @@
 
     <!-- Section 1 : Éditeur de code HTML -->
     <div class="section" id="section1">
-        <div class="toolbar">
+        <div class="toolbar" id="tb1">
             <h2>Source HTML (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" onclick="clearSourceHTML()">Vider</button>
@@ -189,7 +186,7 @@
 
     <!-- Section 2 : Aperçu visuel éditable (WYSIWYG) -->
     <div class="section" id="section2">
-        <div class="toolbar">
+        <div class="toolbar" id="tb2">
             <h2>Aperçu Visuel (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" onclick="clearVisualHTML()">Vider</button>
@@ -202,7 +199,7 @@
 
     <!-- Section 3 : Aperçu Monochrome avec texte coloré entre doubles crochets -->
     <div class="section" id="section3">
-        <div class="toolbar">
+        <div class="toolbar" id="tb3">
             <h2>Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
             <div class="button-group">
                 <button class="btn-clear" onclick="clearProcessedHTML()">Vider</button>
@@ -229,14 +226,13 @@
         updateProcessedView();
 
         // -------------------------------------------------------------
-        // GESTION NATIVE & COMPATIBILITÉ iOS POUR LE DOUBLE-TAP
+        // GESTION DU PLEIN ÉCRAN & DOUBLE-TAP (CIBLÉ SUR LA BARRE D'OUTILS)
         // -------------------------------------------------------------
         
         function toggleFullscreen(sectionId) {
             const targetSection = document.getElementById(sectionId);
             const isFullscreen = targetSection.classList.contains('fullscreen');
             
-            // Ferme toute section éventuellement déjà agrandie
             document.querySelectorAll('.section').forEach(sec => {
                 sec.classList.remove('fullscreen');
                 const btn = sec.querySelector('.btn-toggle-fs');
@@ -251,7 +247,7 @@
             }
         }
 
-        // Échappe du plein écran avec la touche Échap
+        // Touche Échap pour quitter le plein écran
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.section').forEach(sec => {
@@ -262,37 +258,36 @@
             }
         });
 
-        // Détection robuste du double-tap sur iOS & Desktop
-        document.querySelectorAll('.section').forEach(section => {
+        // Application du double-tap/double-clic uniquement sur les en-têtes (toolbar)
+        ['section1', 'section2', 'section3'].forEach(secId => {
+            const section = document.getElementById(secId);
+            const toolbar = section.querySelector('.toolbar');
             let lastTapTime = 0;
 
-            const handleDoubleTap = (e) => {
-                // Ignore si le clic vient directement d'un bouton d'action
+            // PC / MacOS
+            toolbar.addEventListener('dblclick', (e) => {
+                if (e.target.tagName !== 'BUTTON') {
+                    toggleFullscreen(secId);
+                }
+            });
+
+            // iOS / Tactile
+            toolbar.addEventListener('touchend', (e) => {
                 if (e.target.tagName === 'BUTTON') return;
 
                 const currentTime = new Date().getTime();
                 const tapLength = currentTime - lastTapTime;
 
                 if (tapLength < 300 && tapLength > 0) {
-                    toggleFullscreen(section.id);
+                    toggleFullscreen(secId);
                     e.preventDefault();
                 }
                 lastTapTime = currentTime;
-            };
-
-            // Événement standard pour PC / MacOS
-            section.addEventListener('dblclick', (e) => {
-                if (e.target.tagName !== 'BUTTON') {
-                    toggleFullscreen(section.id);
-                }
-            });
-
-            // Événement réactif pour les écrans tactiles (iOS Safari)
-            section.addEventListener('touchend', handleDoubleTap, { passive: false });
+            }, { passive: false });
         });
 
         // -------------------------------------------------------------
-        // LOGIQUE DE TRAITEMENT ET SYNCHRONISATION DU HTML
+        // DÉTECTION DES COULEURS ET SYNCHRONISATION DU HTML
         // -------------------------------------------------------------
 
         function processColoredText(html) {
@@ -349,6 +344,10 @@
             htmlSource.value = htmlProcessed.innerHTML;
             htmlVisual.innerHTML = htmlProcessed.innerHTML;
         });
+
+        // -------------------------------------------------------------
+        // ACTIONS DE COPIE & NOTIFICATIONS
+        // -------------------------------------------------------------
 
         function showToast(message) {
             toast.textContent = message;
