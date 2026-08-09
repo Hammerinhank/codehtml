@@ -2,13 +2,15 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Éditeur & Prévisualisation HTML</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            /* Empêche le comportement de zoom/sélection indésirable lors du double-tap rapide sur iOS */
+            touch-action: manipulation;
         }
 
         body {
@@ -31,6 +33,21 @@
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             overflow: hidden;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none; /* Améliore la réactivité du double-tap */
+        }
+
+        /* Classe activée lors du passage en plein écran */
+        .section.fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
         }
 
         .toolbar {
@@ -40,6 +57,7 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #dcdfe6;
+            cursor: pointer;
         }
 
         .toolbar h2 {
@@ -47,6 +65,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: #4a5568;
+            pointer-events: none;
         }
 
         .button-group {
@@ -78,6 +97,14 @@
             background-color: #c53030;
         }
 
+        button.btn-toggle-fs {
+            background-color: #4a5568;
+        }
+
+        button.btn-toggle-fs:hover {
+            background-color: #2d3748;
+        }
+
         button:active {
             transform: scale(0.98);
         }
@@ -93,6 +120,7 @@
             resize: none;
             outline: none;
             background: #fafafa;
+            user-select: text;
         }
 
         .wysiwyg {
@@ -102,6 +130,7 @@
             overflow-y: auto;
             outline: none;
             background: #ffffff;
+            user-select: text;
         }
 
         /* Troisième fenêtre : Texte entièrement noir, poids normal, pas d'italique */
@@ -125,14 +154,13 @@
             opacity: 0;
             transition: opacity 0.3s ease;
             pointer-events: none;
-            z-index: 1000;
+            z-index: 10000;
         }
 
         .toast.show {
             opacity: 1;
         }
 
-        /* Iframe masquée utilisée pour évaluer les styles calculés (classes CSS, etc.) */
         #renderHost {
             position: absolute;
             width: 0;
@@ -147,11 +175,12 @@
     <iframe id="renderHost"></iframe>
 
     <!-- Section 1 : Éditeur de code HTML -->
-    <div class="section">
+    <div class="section" id="section1">
         <div class="toolbar">
             <h2>Source HTML (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" onclick="clearSourceHTML()">Vider</button>
+                <button class="btn-toggle-fs" onclick="toggleFullscreen('section1')">Plein écran</button>
                 <button onclick="copySourceHTML()">Copier le code HTML</button>
             </div>
         </div>
@@ -159,11 +188,12 @@
     </div>
 
     <!-- Section 2 : Aperçu visuel éditable (WYSIWYG) -->
-    <div class="section">
+    <div class="section" id="section2">
         <div class="toolbar">
             <h2>Aperçu Visuel (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" onclick="clearVisualHTML()">Vider</button>
+                <button class="btn-toggle-fs" onclick="toggleFullscreen('section2')">Plein écran</button>
                 <button onclick="copyRichText()">Copier le texte rendu (Riche)</button>
             </div>
         </div>
@@ -171,11 +201,12 @@
     </div>
 
     <!-- Section 3 : Aperçu Monochrome avec texte coloré entre doubles crochets -->
-    <div class="section">
+    <div class="section" id="section3">
         <div class="toolbar">
             <h2>Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
             <div class="button-group">
                 <button class="btn-clear" onclick="clearProcessedHTML()">Vider</button>
+                <button class="btn-toggle-fs" onclick="toggleFullscreen('section3')">Plein écran</button>
                 <button onclick="copyProcessedRichText()">Copier le texte rendu (Riche)</button>
             </div>
         </div>
@@ -197,7 +228,73 @@
         htmlVisual.innerHTML = initialContent;
         updateProcessedView();
 
-        // Analyse le HTML dans un environnement de rendu réel pour déterminer la couleur calculée
+        // -------------------------------------------------------------
+        // GESTION NATIVE & COMPATIBILITÉ iOS POUR LE DOUBLE-TAP
+        // -------------------------------------------------------------
+        
+        function toggleFullscreen(sectionId) {
+            const targetSection = document.getElementById(sectionId);
+            const isFullscreen = targetSection.classList.contains('fullscreen');
+            
+            // Ferme toute section éventuellement déjà agrandie
+            document.querySelectorAll('.section').forEach(sec => {
+                sec.classList.remove('fullscreen');
+                const btn = sec.querySelector('.btn-toggle-fs');
+                if (btn) btn.textContent = 'Plein écran';
+            });
+
+            if (!isFullscreen) {
+                targetSection.classList.add('fullscreen');
+                const btn = targetSection.querySelector('.btn-toggle-fs');
+                if (btn) btn.textContent = 'Réduire';
+                showToast("Mode plein écran activé");
+            }
+        }
+
+        // Échappe du plein écran avec la touche Échap
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.section').forEach(sec => {
+                    sec.classList.remove('fullscreen');
+                    const btn = sec.querySelector('.btn-toggle-fs');
+                    if (btn) btn.textContent = 'Plein écran';
+                });
+            }
+        });
+
+        // Détection robuste du double-tap sur iOS & Desktop
+        document.querySelectorAll('.section').forEach(section => {
+            let lastTapTime = 0;
+
+            const handleDoubleTap = (e) => {
+                // Ignore si le clic vient directement d'un bouton d'action
+                if (e.target.tagName === 'BUTTON') return;
+
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTapTime;
+
+                if (tapLength < 300 && tapLength > 0) {
+                    toggleFullscreen(section.id);
+                    e.preventDefault();
+                }
+                lastTapTime = currentTime;
+            };
+
+            // Événement standard pour PC / MacOS
+            section.addEventListener('dblclick', (e) => {
+                if (e.target.tagName !== 'BUTTON') {
+                    toggleFullscreen(section.id);
+                }
+            });
+
+            // Événement réactif pour les écrans tactiles (iOS Safari)
+            section.addEventListener('touchend', handleDoubleTap, { passive: false });
+        });
+
+        // -------------------------------------------------------------
+        // LOGIQUE DE TRAITEMENT ET SYNCHRONISATION DU HTML
+        // -------------------------------------------------------------
+
         function processColoredText(html) {
             const iframeDoc = renderHost.contentDocument || renderHost.contentWindow.document;
             iframeDoc.open();
@@ -207,10 +304,7 @@
             const body = iframeDoc.body || iframeDoc.documentElement;
             if (!body) return html;
 
-            // Couleur de base (texte par défaut) du document injecté
             const defaultColor = window.getComputedStyle(body).color;
-
-            // Utilisation d'un TreeWalker pour isoler les nœuds de texte exacts
             const walker = iframeDoc.createTreeWalker(body, NodeFilter.SHOW_TEXT, null, false);
             const textNodesToProcess = [];
 
@@ -220,7 +314,6 @@
                     const parent = node.parentElement;
                     if (parent) {
                         const computedColor = window.getComputedStyle(parent).color;
-                        // Si la couleur calculée est différente de la couleur par défaut (ex: orange, rouge, bleu...)
                         if (computedColor !== defaultColor && computedColor !== 'rgb(0, 0, 0)' && computedColor !== 'rgba(0, 0, 0, 0)') {
                             textNodesToProcess.push(node);
                         }
@@ -238,37 +331,31 @@
             return body.innerHTML;
         }
 
-        // Mise à jour de la 3ème fenêtre
         function updateProcessedView() {
             htmlProcessed.innerHTML = processColoredText(htmlSource.value);
         }
 
-        // Synchronisation : Code HTML -> Aperçu Visuel & Aperçu Monochrome
         htmlSource.addEventListener('input', () => {
             htmlVisual.innerHTML = htmlSource.value;
             updateProcessedView();
         });
 
-        // Synchronisation : Aperçu Visuel -> Code HTML & Aperçu Monochrome
         htmlVisual.addEventListener('input', () => {
             htmlSource.value = htmlVisual.innerHTML;
             updateProcessedView();
         });
 
-        // Synchronisation : Aperçu Monochrome -> Code HTML & Aperçu Visuel
         htmlProcessed.addEventListener('input', () => {
             htmlSource.value = htmlProcessed.innerHTML;
             htmlVisual.innerHTML = htmlProcessed.innerHTML;
         });
 
-        // Notification visuelle
         function showToast(message) {
             toast.textContent = message;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
 
-        // Boutons pour vider le contenu
         function clearSourceHTML() {
             htmlSource.value = '';
             htmlVisual.innerHTML = '';
@@ -290,7 +377,6 @@
             showToast("Contenu vidé !");
         }
 
-        // Bouton 1 : Copie le code brut (HTML)
         async function copySourceHTML() {
             try {
                 await navigator.clipboard.writeText(htmlSource.value);
@@ -300,7 +386,6 @@
             }
         }
 
-        // Fonction générique pour copier le texte riche d'un élément DOM
         async function copyRichFromElement(element) {
             try {
                 const range = document.createRange();
@@ -336,12 +421,10 @@
             }
         }
 
-        // Bouton 2 : Copie le rendu de la deuxième fenêtre
         function copyRichText() {
             copyRichFromElement(htmlVisual);
         }
 
-        // Bouton 3 : Copie le rendu de la troisième fenêtre (Monochrome, normal avec doubles crochets)
         function copyProcessedRichText() {
             copyRichFromElement(htmlProcessed);
         }
