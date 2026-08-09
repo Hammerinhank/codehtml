@@ -35,6 +35,47 @@
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* Section spécifique pour la Combo Box au sommet */
+        .combo-section {
+            background: #ffffff;
+            border: 1px solid #dcdfe6;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            padding: 15px;
+        }
+
+        .combo-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .combo-container select {
+            padding: 8px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 200px;
+            background-color: #fff;
+            outline: none;
+        }
+
+        .combo-container input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 200px;
+            outline: none;
+        }
+
+        .combo-container input[type="text"]:focus,
+        .combo-container select:focus {
+            border-color: #3182ce;
+        }
+
         /* Mode plein écran */
         .section.fullscreen {
             position: fixed !important;
@@ -87,6 +128,14 @@
 
         button:hover {
             background-color: #2b6cb0;
+        }
+
+        button.btn-add-combo {
+            background-color: #4a5568;
+        }
+
+        button.btn-add-combo:hover {
+            background-color: #2d3748;
         }
 
         button.btn-clear {
@@ -198,6 +247,17 @@
 
     <iframe id="renderHost"></iframe>
 
+    <!-- SECTION COMBO BOX (Ajoutée avant la première fenêtre) -->
+    <div class="combo-section">
+        <div class="combo-container">
+            <select id="customSelect">
+                <option value="">-- Sélectionnez un élément --</option>
+            </select>
+            <input type="text" id="newItemInput" placeholder="Intitulé à ajouter dans la liste..." />
+            <button class="btn-add-combo" onclick="addComboItem()">Ajouter à la liste</button>
+        </div>
+    </div>
+
     <!-- NOUVELLE FENÊTRE 1 : Instructions Persistantes (LocalStorage) -->
     <div class="section" id="sectionPrompt">
         <div class="toolbar" id="tbPrompt">
@@ -272,6 +332,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
+        const customSelect = document.getElementById('customSelect');
         const promptText = document.getElementById('promptText');
         const contextText = document.getElementById('contextText');
         const htmlSource = document.getElementById('htmlSource');
@@ -281,25 +342,89 @@
         const toast = document.getElementById('toast');
 
         // -------------------------------------------------------------
-        // PERSISTENCE LOCALSTORAGE (FENÊTRE 1)
+        // PERSISTENCE LOCALSTORAGE (COMBO BOX & PROMPTS ASSOCIÉS)
         // -------------------------------------------------------------
 
-        const LOCAL_STORAGE_KEY = 'app_persistent_prompt';
+        const STORAGE_KEY_OPTIONS = 'app_combo_options';
+        const STORAGE_KEY_SELECTED = 'app_combo_selected';
+        const STORAGE_KEY_PROMPTS_MAP = 'app_combo_prompts_map';
 
-        // Chargement initial du texte sauvegardé
-        const savedPrompt = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (savedPrompt !== null) {
-            promptText.value = savedPrompt;
+        // 1. Chargement initial des options et des textes
+        let comboOptions = JSON.parse(localStorage.getItem(STORAGE_KEY_OPTIONS)) || [];
+        let promptsMap = JSON.parse(localStorage.getItem(STORAGE_KEY_PROMPTS_MAP)) || {};
+        let selectedValue = localStorage.getItem(STORAGE_KEY_SELECTED) || '';
+
+        function renderSelectOptions() {
+            customSelect.innerHTML = '<option value="">-- Sélectionnez un élément --</option>';
+            comboOptions.forEach(opt => {
+                const optionEl = document.createElement('option');
+                optionEl.value = opt;
+                optionEl.textContent = opt;
+                customSelect.appendChild(optionEl);
+            });
+            customSelect.value = selectedValue;
         }
 
-        // Sauvegarde à chaque modification
+        function updatePromptForSelection() {
+            const currentKey = customSelect.value;
+            promptText.value = promptsMap[currentKey] || '';
+        }
+
+        renderSelectOptions();
+        updatePromptForSelection();
+
+        // Ajout d'un nouvel élément
+        function addComboItem() {
+            const input = document.getElementById('newItemInput');
+            const text = input.value.trim();
+
+            if (text === '') {
+                showToast("Veuillez saisir un intitulé !");
+                return;
+            }
+
+            if (!comboOptions.includes(text)) {
+                comboOptions.push(text);
+                localStorage.setItem(STORAGE_KEY_OPTIONS, JSON.stringify(comboOptions));
+            }
+
+            selectedValue = text;
+            localStorage.setItem(STORAGE_KEY_SELECTED, selectedValue);
+
+            renderSelectOptions();
+            updatePromptForSelection();
+
+            input.value = '';
+            showToast("Élément ajouté à la liste !");
+        }
+
+        // Touche Entrée dans le champ d'ajout
+        document.getElementById('newItemInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addComboItem();
+            }
+        });
+
+        // Changement de sélection dans la liste
+        customSelect.addEventListener('change', () => {
+            selectedValue = customSelect.value;
+            localStorage.setItem(STORAGE_KEY_SELECTED, selectedValue);
+            updatePromptForSelection();
+        });
+
+        // Sauvegarde dynamique à la saisie dans la Fenêtre 1
         promptText.addEventListener('input', () => {
-            localStorage.setItem(LOCAL_STORAGE_KEY, promptText.value);
+            const currentKey = customSelect.value;
+            promptsMap[currentKey] = promptText.value;
+            localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
         });
 
         function clearPromptText() {
             promptText.value = '';
-            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            const currentKey = customSelect.value;
+            delete promptsMap[currentKey];
+            localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
             showToast("Instructions vidées !");
         }
 
@@ -308,7 +433,9 @@
                 const text = await navigator.clipboard.readText();
                 if (text !== undefined) {
                     promptText.value = text;
-                    localStorage.setItem(LOCAL_STORAGE_KEY, text);
+                    const currentKey = customSelect.value;
+                    promptsMap[currentKey] = text;
+                    localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
                     showToast("Instructions collées !");
                 }
             } catch (err) {
@@ -537,7 +664,7 @@
 
         async function copySourceHTML() {
             try {
-                await navigator.clipboard.writeText(htmlSource.value);
+                await navigator.clipboard.readText(htmlSource.value);
                 showToast("Code HTML brut copié !");
             } catch (err) {
                 console.error('Erreur de copie :', err);
