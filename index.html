@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Éditeur & Prévisualisation HTML</title>
+    <title>Éditeur & Prévisualisation HTML avec ChatGPT</title>
     <style>
         * {
             box-sizing: border-box;
@@ -17,7 +17,7 @@
             color: #333;
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            min-height: 100vh;
             padding: 15px;
             gap: 15px;
         }
@@ -25,6 +25,7 @@
         .section {
             display: flex;
             flex-direction: column;
+            min-height: 200px;
             flex: 1;
             background: #ffffff;
             border: 1px solid #dcdfe6;
@@ -112,6 +113,22 @@
             background-color: #2d3748;
         }
 
+        /* Style spécifique pour le bouton d'envoi vers ChatGPT */
+        .btn-chatgpt {
+            background-color: #10a37f;
+            color: white;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 8px;
+            align-self: flex-start;
+            box-shadow: 0 2px 6px rgba(16, 163, 127, 0.3);
+        }
+
+        .btn-chatgpt:hover {
+            background-color: #0e8e6d;
+        }
+
         button:active {
             transform: scale(0.98);
         }
@@ -119,12 +136,13 @@
         textarea {
             width: 100%;
             height: 100%;
+            min-height: 150px;
             border: none;
             padding: 15px;
             font-family: "Courier New", Courier, monospace;
             font-size: 14px;
             line-height: 1.5;
-            resize: none;
+            resize: vertical;
             outline: none;
             background: #fafafa;
         }
@@ -132,13 +150,14 @@
         .wysiwyg {
             width: 100%;
             height: 100%;
+            min-height: 150px;
             padding: 15px;
             overflow-y: auto;
             outline: none;
             background: #ffffff;
         }
 
-        /* Troisième fenêtre : Texte entièrement noir, poids normal, pas d'italique */
+        /* Troisième fenêtre visuelle : Texte entièrement noir, poids normal, pas d'italique */
         .wysiwyg-monochrome, 
         .wysiwyg-monochrome * {
             color: #000000 !important;
@@ -179,7 +198,38 @@
 
     <iframe id="renderHost"></iframe>
 
-    <!-- Section 1 : Éditeur de code HTML -->
+    <!-- NOUVELLE FENÊTRE 1 : Instructions Persistantes (LocalStorage) -->
+    <div class="section" id="sectionPrompt">
+        <div class="toolbar" id="tbPrompt">
+            <h2>1. Instructions / Prompt (Sauvegarde automatique)</h2>
+            <div class="button-group">
+                <button class="btn-clear" onclick="clearPromptText()">Vider</button>
+                <button class="btn-paste" onclick="pasteToPrompt()">Coller</button>
+                <button class="btn-toggle-fs" onclick="toggleFullscreen('sectionPrompt')">Plein écran</button>
+            </div>
+        </div>
+        <textarea id="promptText" placeholder="Entrez vos instructions permanentes ici (ex: Traduis ce texte en anglais...)..."></textarea>
+    </div>
+
+    <!-- NOUVELLE FENÊTRE 2 : Contexte / Données à coller -->
+    <div class="section" id="sectionContext">
+        <div class="toolbar" id="tbContext">
+            <h2>2. Données / Contexte</h2>
+            <div class="button-group">
+                <button class="btn-clear" onclick="clearContextText()">Vider</button>
+                <button class="btn-paste" onclick="pasteToContext()">Coller</button>
+                <button class="btn-toggle-fs" onclick="toggleFullscreen('sectionContext')">Plein écran</button>
+            </div>
+        </div>
+        <textarea id="contextText" placeholder="Collez ici le contenu ou les données à traiter..."></textarea>
+    </div>
+
+    <!-- BOUTON D'ENVOI VERS CHATGPT -->
+    <button class="btn-chatgpt" onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
+
+    <hr style="border: 0; border-top: 1px solid #dcdfe6; margin: 10px 0;">
+
+    <!-- FENÊTRE 3 : Éditeur de code HTML (Ancienne Fenêtre 1) -->
     <div class="section" id="section1">
         <div class="toolbar" id="tb1">
             <h2>Source HTML (Éditable)</h2>
@@ -193,7 +243,7 @@
         <textarea id="htmlSource" placeholder="Saisissez ou collez votre code HTML ici..."></textarea>
     </div>
 
-    <!-- Section 2 : Aperçu visuel éditable (WYSIWYG) -->
+    <!-- FENÊTRE 4 : Aperçu visuel éditable (WYSIWYG) -->
     <div class="section" id="section2">
         <div class="toolbar" id="tb2">
             <h2>Aperçu Visuel (Éditable)</h2>
@@ -206,7 +256,7 @@
         <div id="htmlVisual" class="wysiwyg" contenteditable="true"></div>
     </div>
 
-    <!-- Section 3 : Aperçu Monochrome avec texte coloré entre doubles crochets -->
+    <!-- FENÊTRE 5 : Aperçu Monochrome avec texte coloré entre doubles crochets -->
     <div class="section" id="section3">
         <div class="toolbar" id="tb3">
             <h2>Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
@@ -222,25 +272,101 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
+        const promptText = document.getElementById('promptText');
+        const contextText = document.getElementById('contextText');
         const htmlSource = document.getElementById('htmlSource');
         const htmlVisual = document.getElementById('htmlVisual');
         const htmlProcessed = document.getElementById('htmlProcessed');
         const renderHost = document.getElementById('renderHost');
         const toast = document.getElementById('toast');
 
-        // Exemple de contenu initial
+        // -------------------------------------------------------------
+        // PERSISTENCE LOCALSTORAGE (FENÊTRE 1)
+        // -------------------------------------------------------------
+
+        const LOCAL_STORAGE_KEY = 'app_persistent_prompt';
+
+        // Chargement initial du texte sauvegardé
+        const savedPrompt = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedPrompt !== null) {
+            promptText.value = savedPrompt;
+        }
+
+        // Sauvegarde à chaque modification
+        promptText.addEventListener('input', () => {
+            localStorage.setItem(LOCAL_STORAGE_KEY, promptText.value);
+        });
+
+        function clearPromptText() {
+            promptText.value = '';
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            showToast("Instructions vidées !");
+        }
+
+        async function pasteToPrompt() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text !== undefined) {
+                    promptText.value = text;
+                    localStorage.setItem(LOCAL_STORAGE_KEY, text);
+                    showToast("Instructions collées !");
+                }
+            } catch (err) {
+                showToast("Accès au presse-papier non autorisé");
+            }
+        }
+
+        function clearContextText() {
+            contextText.value = '';
+            showToast("Contexte vidé !");
+        }
+
+        async function pasteToContext() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text !== undefined) {
+                    contextText.value = text;
+                    showToast("Contexte collé !");
+                }
+            } catch (err) {
+                showToast("Accès au presse-papier non autorisé");
+            }
+        }
+
+        // -------------------------------------------------------------
+        // ENVOI VERS CHATGPT
+        // -------------------------------------------------------------
+
+        function sendToChatGPT() {
+            const part1 = promptText.value.trim();
+            const part2 = contextText.value.trim();
+
+            if (!part1 && !part2) {
+                showToast("Les fenêtres sont vides !");
+                return;
+            }
+
+            // Concaténation : Contenu 1 + Saut de ligne + Contenu 2
+            const combinedQuery = part1 + (part1 && part2 ? "\n" : "") + part2;
+            const encodedQuery = encodeURIComponent(combinedQuery);
+            
+            // Ouverture de ChatGPT avec le paramètre 'q'
+            const targetUrl = `https://chatgpt.com/?q=${encodedQuery}`;
+            window.open(targetUrl, '_blank');
+        }
+
+        // Exemple de contenu initial pour la partie HTML
         const initialContent = `<h3>Titre d'exemple</h3>\n<p>Ceci est un texte en <strong>gras</strong> et en <span style="color: red;">rouge</span>.</p>\n<ul>\n  <li>Élément 1</li>\n  <li>Élément en <font color="blue">bleu</font></li>\n</ul>`;
         htmlSource.value = initialContent;
         htmlVisual.innerHTML = initialContent;
         updateProcessedView();
 
         // -------------------------------------------------------------
-        // COLLAGE DIRECT VIA API CLIPBOARD
+        // COLLAGE DIRECT ET SYNCHRONISATION HTML
         // -------------------------------------------------------------
 
         async function pasteToSourceHTML() {
             try {
-                // Lecture directe du presse-papier système lors du clic
                 const text = await navigator.clipboard.readText();
                 if (text !== undefined) {
                     htmlSource.value = text;
@@ -249,12 +375,10 @@
                     showToast("Code HTML collé !");
                 }
             } catch (err) {
-                // Si la permission est refusée ou non supportée
                 showToast("Accès au presse-papier non autorisé");
             }
         }
 
-        // Écouteur natif si l'utilisateur colle manuellement (Cmd+V / Ctrl+V / Menu long)
         htmlSource.addEventListener('paste', () => {
             setTimeout(() => {
                 htmlVisual.innerHTML = htmlSource.value;
@@ -264,7 +388,7 @@
         });
 
         // -------------------------------------------------------------
-        // GESTION DU PLEIN ÉCRAN & DOUBLE-TAP (CIBLÉ SUR LA BARRE D'OUTILS)
+        // GESTION DU PLEIN ÉCRAN & DOUBLE-TAP (CIBLÉ SUR TOUTES LES TOOLBARS)
         // -------------------------------------------------------------
         
         function toggleFullscreen(sectionId) {
@@ -285,7 +409,6 @@
             }
         }
 
-        // Touche Échap pour quitter le plein écran
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.section').forEach(sec => {
@@ -296,20 +419,18 @@
             }
         });
 
-        // Application du double-tap/double-clic uniquement sur les en-têtes (toolbar)
-        ['section1', 'section2', 'section3'].forEach(secId => {
+        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3'].forEach(secId => {
             const section = document.getElementById(secId);
+            if (!section) return;
             const toolbar = section.querySelector('.toolbar');
             let lastTapTime = 0;
 
-            // PC / MacOS
             toolbar.addEventListener('dblclick', (e) => {
                 if (e.target.tagName !== 'BUTTON') {
                     toggleFullscreen(secId);
                 }
             });
 
-            // iOS / Tactile
             toolbar.addEventListener('touchend', (e) => {
                 if (e.target.tagName === 'BUTTON') return;
 
