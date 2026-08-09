@@ -104,12 +104,13 @@
             background: #ffffff;
         }
 
-        /* Troisième fenêtre : force la couleur du texte en noir */
-        .wysiwyg-monochrome {
-            color: #000000 !important;
-        }
+        /* Troisième fenêtre : Texte entièrement noir, poids normal, pas d'italique */
+        .wysiwyg-monochrome, 
         .wysiwyg-monochrome * {
             color: #000000 !important;
+            font-weight: normal !important;
+            font-style: normal !important;
+            text-decoration: none !important;
         }
 
         .toast {
@@ -184,23 +185,51 @@
         htmlVisual.innerHTML = initialContent;
         updateProcessedView();
 
-        // Fonction pour transformer le HTML : encadrer le texte coloré de doubles crochets [[...]]
+        // Vérifie si un élément ou un de ses parents possède une couleur spécifique
+        function hasColoredParentOrSelf(node) {
+            let current = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+            while (current && current !== document.body) {
+                // Balise <font color="...">
+                if (current.tagName === 'FONT' && current.hasAttribute('color')) {
+                    return true;
+                }
+                // Style inline `color:...`
+                if (current.style && current.style.color) {
+                    const c = current.style.color.toLowerCase().replace(/\s+/g, '');
+                    if (c !== '' && c !== 'black' && c !== '#000' && c !== '#000000' && c !== 'rgb(0,0,0)') {
+                        return true;
+                    }
+                }
+                current = current.parentElement;
+            }
+            return false;
+        }
+
+        // Transforme le HTML pour insérer [[ ]] autour du texte qui était coloré
         function processColoredText(html) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
+            const container = document.createElement('div');
+            container.innerHTML = html;
 
-            // Détection de tous les éléments ayant une couleur explicite
-            const coloredElements = tempDiv.querySelectorAll('[style*="color"], font[color]');
+            // Utilisation d'un TreeWalker pour isoler les nœuds de texte exacts
+            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+            const textNodesToProcess = [];
 
-            coloredElements.forEach(el => {
-                // Vérifie si l'élément possède du texte non vide et n'a pas déjà été traité
-                if (el.textContent && !el.dataset.bracketed) {
-                    el.textContent = `[[${el.textContent}]]`;
-                    el.dataset.bracketed = "true";
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.nodeValue.trim() !== '' && hasColoredParentOrSelf(node)) {
+                    textNodesToProcess.push(node);
+                }
+            }
+
+            textNodesToProcess.forEach(textNode => {
+                const val = textNode.nodeValue;
+                // Évite d'ajouter à nouveau des crochets si déjà présents
+                if (!val.startsWith('[[') || !val.endsWith(']]')) {
+                    textNode.nodeValue = `[[${val}]]`;
                 }
             });
 
-            return tempDiv.innerHTML;
+            return container.innerHTML;
         }
 
         // Mise à jour de la 3ème fenêtre
@@ -306,7 +335,7 @@
             copyRichFromElement(htmlVisual);
         }
 
-        // Bouton 3 : Copie le rendu de la troisième fenêtre (Monochrome avec doubles crochets)
+        // Bouton 3 : Copie le rendu de la troisième fenêtre (Monochrome, normal avec doubles crochets)
         function copyProcessedRichText() {
             copyRichFromElement(htmlProcessed);
         }
