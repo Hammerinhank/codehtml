@@ -348,11 +348,23 @@
         const STORAGE_KEY_OPTIONS = 'app_combo_options';
         const STORAGE_KEY_SELECTED = 'app_combo_selected';
         const STORAGE_KEY_PROMPTS_MAP = 'app_combo_prompts_map';
+        const STORAGE_KEY_CONTEXT = 'app_persistent_context';
 
         // 1. Chargement initial des options et des textes
         let comboOptions = JSON.parse(localStorage.getItem(STORAGE_KEY_OPTIONS)) || [];
         let promptsMap = JSON.parse(localStorage.getItem(STORAGE_KEY_PROMPTS_MAP)) || {};
         let selectedValue = localStorage.getItem(STORAGE_KEY_SELECTED) || '';
+
+        // Chargement initial du contexte persistant
+        const savedContext = localStorage.getItem(STORAGE_KEY_CONTEXT);
+        if (savedContext !== null) {
+            contextText.value = savedContext;
+        }
+
+        // Sauvegarde automatique du contexte à la saisie
+        contextText.addEventListener('input', () => {
+            localStorage.setItem(STORAGE_KEY_CONTEXT, contextText.value);
+        });
 
         function renderSelectOptions() {
             customSelect.innerHTML = '<option value="">-- Sélectionnez un élément --</option>';
@@ -445,6 +457,7 @@
 
         function clearContextText() {
             contextText.value = '';
+            localStorage.removeItem(STORAGE_KEY_CONTEXT);
             showToast("Contexte vidé !");
         }
 
@@ -453,6 +466,7 @@
                 const text = await navigator.clipboard.readText();
                 if (text !== undefined) {
                     contextText.value = text;
+                    localStorage.setItem(STORAGE_KEY_CONTEXT, text);
                     showToast("Contexte collé !");
                 }
             } catch (err) {
