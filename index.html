@@ -96,6 +96,14 @@
             background-color: #c53030;
         }
 
+        button.btn-paste {
+            background-color: #38a169;
+        }
+
+        button.btn-paste:hover {
+            background-color: #2f855a;
+        }
+
         button.btn-toggle-fs {
             background-color: #4a5568;
         }
@@ -177,6 +185,7 @@
             <h2>Source HTML (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" onclick="clearSourceHTML()">Vider</button>
+                <button class="btn-paste" onclick="pasteToSourceHTML()">Coller</button>
                 <button class="btn-toggle-fs" onclick="toggleFullscreen('section1')">Plein écran</button>
                 <button onclick="copySourceHTML()">Copier le code HTML</button>
             </div>
@@ -224,6 +233,36 @@
         htmlSource.value = initialContent;
         htmlVisual.innerHTML = initialContent;
         updateProcessedView();
+
+        // -------------------------------------------------------------
+        // FONCTION DE COLLAGE DÉDIÉE ET SYNCHRONISATION
+        // -------------------------------------------------------------
+
+        async function pasteToSourceHTML() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    htmlSource.value = text;
+                    htmlVisual.innerHTML = text;
+                    updateProcessedView();
+                    showToast("Code HTML collé !");
+                }
+            } catch (err) {
+                // Si l'accès au presse-papier direct est bloqué par le navigateur,
+                // on donne le focus et on invite l'utilisateur à coller
+                htmlSource.focus();
+                showToast("Faites un appui long puis 'Coller'");
+            }
+        }
+
+        // Écouteur natif d'événement "paste" sur le textarea
+        htmlSource.addEventListener('paste', (e) => {
+            setTimeout(() => {
+                htmlVisual.innerHTML = htmlSource.value;
+                updateProcessedView();
+                showToast("Code HTML collé !");
+            }, 50);
+        });
 
         // -------------------------------------------------------------
         // GESTION DU PLEIN ÉCRAN & DOUBLE-TAP (CIBLÉ SUR LA BARRE D'OUTILS)
@@ -425,7 +464,7 @@
         }
 
         function copyProcessedRichText() {
-            copyRichFromElement(htmlProcessed);
+            copyProcessedRichText();
         }
     </script>
 </body>
