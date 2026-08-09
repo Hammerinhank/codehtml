@@ -341,6 +341,9 @@
         const renderHost = document.getElementById('renderHost');
         const toast = document.getElementById('toast');
 
+        // Variable pour conserver le texte original de la zone prompt avant modification
+        let lastPromptText = '';
+
         // -------------------------------------------------------------
         // PERSISTENCE LOCALSTORAGE (COMBO BOX & PROMPTS ASSOCIÉS)
         // -------------------------------------------------------------
@@ -379,7 +382,9 @@
 
         function updatePromptForSelection() {
             const currentKey = customSelect.value;
-            promptText.value = promptsMap[currentKey] || '';
+            const newText = promptsMap[currentKey] || '';
+            promptText.value = newText;
+            lastPromptText = newText;
         }
 
         renderSelectOptions();
@@ -425,30 +430,49 @@
             updatePromptForSelection();
         });
 
-        // Sauvegarde dynamique à la saisie dans la Fenêtre 1
-        promptText.addEventListener('input', () => {
-            const currentKey = customSelect.value;
-            promptsMap[currentKey] = promptText.value;
-            localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
-        });
+        // Gestion des modifications manuelles (saisie directe et collage) dans la Fenêtre 1 avec confirmation
+        function handlePromptChange() {
+            if (promptText.value !== lastPromptText) {
+                const confirmChange = confirm("Voulez-vous vraiment modifier le texte des instructions ?");
+                if (confirmChange) {
+                    lastPromptText = promptText.value;
+                    const currentKey = customSelect.value;
+                    promptsMap[currentKey] = promptText.value;
+                    localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
+                } else {
+                    promptText.value = lastPromptText;
+                }
+            }
+        }
+
+        promptText.addEventListener('change', handlePromptChange);
 
         function clearPromptText() {
-            promptText.value = '';
-            const currentKey = customSelect.value;
-            delete promptsMap[currentKey];
-            localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
-            showToast("Instructions vidées !");
+            if (promptText.value === '') return;
+            const confirmClear = confirm("Voulez-vous vraiment vider le texte des instructions ?");
+            if (confirmClear) {
+                promptText.value = '';
+                lastPromptText = '';
+                const currentKey = customSelect.value;
+                delete promptsMap[currentKey];
+                localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
+                showToast("Instructions vidées !");
+            }
         }
 
         async function pasteToPrompt() {
             try {
                 const text = await navigator.clipboard.readText();
                 if (text !== undefined) {
-                    promptText.value = text;
-                    const currentKey = customSelect.value;
-                    promptsMap[currentKey] = text;
-                    localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
-                    showToast("Instructions collées !");
+                    const confirmPaste = confirm("Voulez-vous vraiment remplacer le texte des instructions par le contenu du presse-papier ?");
+                    if (confirmPaste) {
+                        promptText.value = text;
+                        lastPromptText = text;
+                        const currentKey = customSelect.value;
+                        promptsMap[currentKey] = text;
+                        localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
+                        showToast("Instructions collées !");
+                    }
                 }
             } catch (err) {
                 showToast("Accès au presse-papier non autorisé");
