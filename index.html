@@ -235,28 +235,27 @@
         updateProcessedView();
 
         // -------------------------------------------------------------
-        // FONCTION DE COLLAGE DÉDIÉE ET SYNCHRONISATION
+        // COLLAGE DIRECT VIA API CLIPBOARD
         // -------------------------------------------------------------
 
         async function pasteToSourceHTML() {
             try {
+                // Lecture directe du presse-papier système lors du clic
                 const text = await navigator.clipboard.readText();
-                if (text) {
+                if (text !== undefined) {
                     htmlSource.value = text;
                     htmlVisual.innerHTML = text;
                     updateProcessedView();
                     showToast("Code HTML collé !");
                 }
             } catch (err) {
-                // Si l'accès au presse-papier direct est bloqué par le navigateur,
-                // on donne le focus et on invite l'utilisateur à coller
-                htmlSource.focus();
-                showToast("Faites un appui long puis 'Coller'");
+                // Si la permission est refusée ou non supportée
+                showToast("Accès au presse-papier non autorisé");
             }
         }
 
-        // Écouteur natif d'événement "paste" sur le textarea
-        htmlSource.addEventListener('paste', (e) => {
+        // Écouteur natif si l'utilisateur colle manuellement (Cmd+V / Ctrl+V / Menu long)
+        htmlSource.addEventListener('paste', () => {
             setTimeout(() => {
                 htmlVisual.innerHTML = htmlSource.value;
                 updateProcessedView();
@@ -464,7 +463,7 @@
         }
 
         function copyProcessedRichText() {
-            copyProcessedRichText();
+            copyRichFromElement(htmlProcessed);
         }
     </script>
 </body>
