@@ -104,6 +104,14 @@
             background: #ffffff;
         }
 
+        /* Troisième fenêtre : force la couleur du texte en noir */
+        .wysiwyg-monochrome {
+            color: #000000 !important;
+        }
+        .wysiwyg-monochrome * {
+            color: #000000 !important;
+        }
+
         .toast {
             position: fixed;
             bottom: 20px;
@@ -150,26 +158,72 @@
         <div id="htmlVisual" class="wysiwyg" contenteditable="true"></div>
     </div>
 
+    <!-- Section 3 : Aperçu Monochrome avec texte coloré entre doubles crochets -->
+    <div class="section">
+        <div class="toolbar">
+            <h2>Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
+            <div class="button-group">
+                <button class="btn-clear" onclick="clearProcessedHTML()">Vider</button>
+                <button onclick="copyProcessedRichText()">Copier le texte rendu (Riche)</button>
+            </div>
+        </div>
+        <div id="htmlProcessed" class="wysiwyg wysiwyg-monochrome" contenteditable="true"></div>
+    </div>
+
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
         const htmlSource = document.getElementById('htmlSource');
         const htmlVisual = document.getElementById('htmlVisual');
+        const htmlProcessed = document.getElementById('htmlProcessed');
         const toast = document.getElementById('toast');
 
         // Exemple de contenu initial
-        const initialContent = `<h3>Titre d'exemple</h3>\n<p>Ceci est un texte en <strong>gras</strong> et en <em>italique</em>.</p>\n<ul>\n  <li>Élément 1</li>\n  <li>Élément 2</li>\n</ul>`;
+        const initialContent = `<h3>Titre d'exemple</h3>\n<p>Ceci est un texte en <strong>gras</strong> et en <span style="color: red;">rouge</span>.</p>\n<ul>\n  <li>Élément 1</li>\n  <li>Élément en <font color="blue">bleu</font></li>\n</ul>`;
         htmlSource.value = initialContent;
         htmlVisual.innerHTML = initialContent;
+        updateProcessedView();
 
-        // Synchronisation : Code HTML -> Aperçu Visuel
+        // Fonction pour transformer le HTML : encadrer le texte coloré de doubles crochets [[...]]
+        function processColoredText(html) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+
+            // Détection de tous les éléments ayant une couleur explicite
+            const coloredElements = tempDiv.querySelectorAll('[style*="color"], font[color]');
+
+            coloredElements.forEach(el => {
+                // Vérifie si l'élément possède du texte non vide et n'a pas déjà été traité
+                if (el.textContent && !el.dataset.bracketed) {
+                    el.textContent = `[[${el.textContent}]]`;
+                    el.dataset.bracketed = "true";
+                }
+            });
+
+            return tempDiv.innerHTML;
+        }
+
+        // Mise à jour de la 3ème fenêtre
+        function updateProcessedView() {
+            htmlProcessed.innerHTML = processColoredText(htmlSource.value);
+        }
+
+        // Synchronisation : Code HTML -> Aperçu Visuel & Aperçu Monochrome
         htmlSource.addEventListener('input', () => {
             htmlVisual.innerHTML = htmlSource.value;
+            updateProcessedView();
         });
 
-        // Synchronisation : Aperçu Visuel -> Code HTML
+        // Synchronisation : Aperçu Visuel -> Code HTML & Aperçu Monochrome
         htmlVisual.addEventListener('input', () => {
             htmlSource.value = htmlVisual.innerHTML;
+            updateProcessedView();
+        });
+
+        // Synchronisation : Aperçu Monochrome -> Code HTML & Aperçu Visuel
+        htmlProcessed.addEventListener('input', () => {
+            htmlSource.value = htmlProcessed.innerHTML;
+            htmlVisual.innerHTML = htmlProcessed.innerHTML;
         });
 
         // Notification visuelle
@@ -183,12 +237,21 @@
         function clearSourceHTML() {
             htmlSource.value = '';
             htmlVisual.innerHTML = '';
+            htmlProcessed.innerHTML = '';
             showToast("Contenu vidé !");
         }
 
         function clearVisualHTML() {
             htmlVisual.innerHTML = '';
             htmlSource.value = '';
+            htmlProcessed.innerHTML = '';
+            showToast("Contenu vidé !");
+        }
+
+        function clearProcessedHTML() {
+            htmlProcessed.innerHTML = '';
+            htmlSource.value = '';
+            htmlVisual.innerHTML = '';
             showToast("Contenu vidé !");
         }
 
@@ -202,21 +265,18 @@
             }
         }
 
-        // Bouton 2 : Copie le rendu visuel (Texte Riche Formaté)
-        async function copyRichText() {
+        // Fonction générique pour copier le texte riche d'un élément DOM
+        async function copyRichFromElement(element) {
             try {
-                // Méthode moderne basée sur la sélection DOM :
-                // Force le navigateur à créer un objet de sélection 'texte riche'
                 const range = document.createRange();
-                range.selectNodeContents(htmlVisual);
+                range.selectNodeContents(element);
                 
                 const selection = window.getSelection();
                 selection.removeAllRanges();
                 selection.addRange(range);
 
-                // Tentative via la Clipboard API avec empaquetage HTML strict
-                const htmlContent = `<div>${htmlVisual.innerHTML}</div>`;
-                const textContent = htmlVisual.innerText;
+                const htmlContent = `<div>${element.innerHTML}</div>`;
+                const textContent = element.innerText;
 
                 const blobHtml = new Blob([htmlContent], { type: 'text/html' });
                 const blobText = new Blob([textContent], { type: 'text/plain' });
@@ -227,13 +287,10 @@
                 });
 
                 await navigator.clipboard.write([item]);
-
-                // Nettoyage de la sélection à l'écran
                 selection.removeAllRanges();
 
                 showToast("Texte riche copié !");
             } catch (err) {
-                // Secours (fallback) pour certains navigateurs stricts
                 try {
                     document.execCommand('copy');
                     window.getSelection().removeAllRanges();
@@ -242,6 +299,16 @@
                     console.error('Erreur lors de la copie riche :', fallbackErr);
                 }
             }
+        }
+
+        // Bouton 2 : Copie le rendu de la deuxième fenêtre
+        function copyRichText() {
+            copyRichFromElement(htmlVisual);
+        }
+
+        // Bouton 3 : Copie le rendu de la troisième fenêtre (Monochrome avec doubles crochets)
+        function copyProcessedRichText() {
+            copyRichFromElement(htmlProcessed);
         }
     </script>
 </body>
