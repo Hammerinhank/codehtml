@@ -131,9 +131,20 @@
         .toast.show {
             opacity: 1;
         }
+
+        /* Iframe masquée utilisée pour évaluer les styles calculés (classes CSS, etc.) */
+        #renderHost {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border: 0;
+            visibility: hidden;
+        }
     </style>
 </head>
 <body>
+
+    <iframe id="renderHost"></iframe>
 
     <!-- Section 1 : Éditeur de code HTML -->
     <div class="section">
@@ -177,6 +188,7 @@
         const htmlSource = document.getElementById('htmlSource');
         const htmlVisual = document.getElementById('htmlVisual');
         const htmlProcessed = document.getElementById('htmlProcessed');
+        const renderHost = document.getElementById('renderHost');
         const toast = document.getElementById('toast');
 
         // Exemple de contenu initial
@@ -185,51 +197,45 @@
         htmlVisual.innerHTML = initialContent;
         updateProcessedView();
 
-        // Vérifie si un élément ou un de ses parents possède une couleur spécifique
-        function hasColoredParentOrSelf(node) {
-            let current = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-            while (current && current !== document.body) {
-                // Balise <font color="...">
-                if (current.tagName === 'FONT' && current.hasAttribute('color')) {
-                    return true;
-                }
-                // Style inline `color:...`
-                if (current.style && current.style.color) {
-                    const c = current.style.color.toLowerCase().replace(/\s+/g, '');
-                    if (c !== '' && c !== 'black' && c !== '#000' && c !== '#000000' && c !== 'rgb(0,0,0)') {
-                        return true;
-                    }
-                }
-                current = current.parentElement;
-            }
-            return false;
-        }
-
-        // Transforme le HTML pour insérer [[ ]] autour du texte qui était coloré
+        // Analyse le HTML dans un environnement de rendu réel pour déterminer la couleur calculée
         function processColoredText(html) {
-            const container = document.createElement('div');
-            container.innerHTML = html;
+            const iframeDoc = renderHost.contentDocument || renderHost.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(html);
+            iframeDoc.close();
+
+            const body = iframeDoc.body || iframeDoc.documentElement;
+            if (!body) return html;
+
+            // Couleur de base (texte par défaut) du document injecté
+            const defaultColor = window.getComputedStyle(body).color;
 
             // Utilisation d'un TreeWalker pour isoler les nœuds de texte exacts
-            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+            const walker = iframeDoc.createTreeWalker(body, NodeFilter.SHOW_TEXT, null, false);
             const textNodesToProcess = [];
 
             let node;
             while (node = walker.nextNode()) {
-                if (node.nodeValue.trim() !== '' && hasColoredParentOrSelf(node)) {
-                    textNodesToProcess.push(node);
+                if (node.nodeValue.trim() !== '') {
+                    const parent = node.parentElement;
+                    if (parent) {
+                        const computedColor = window.getComputedStyle(parent).color;
+                        // Si la couleur calculée est différente de la couleur par défaut (ex: orange, rouge, bleu...)
+                        if (computedColor !== defaultColor && computedColor !== 'rgb(0, 0, 0)' && computedColor !== 'rgba(0, 0, 0, 0)') {
+                            textNodesToProcess.push(node);
+                        }
+                    }
                 }
             }
 
             textNodesToProcess.forEach(textNode => {
                 const val = textNode.nodeValue;
-                // Évite d'ajouter à nouveau des crochets si déjà présents
                 if (!val.startsWith('[[') || !val.endsWith(']]')) {
                     textNode.nodeValue = `[[${val}]]`;
                 }
             });
 
-            return container.innerHTML;
+            return body.innerHTML;
         }
 
         // Mise à jour de la 3ème fenêtre
