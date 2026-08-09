@@ -49,6 +49,11 @@
             color: #4a5568;
         }
 
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
         button {
             background-color: #3182ce;
             color: white;
@@ -63,6 +68,14 @@
 
         button:hover {
             background-color: #2b6cb0;
+        }
+
+        button.btn-clear {
+            background-color: #e53e3e;
+        }
+
+        button.btn-clear:hover {
+            background-color: #c53030;
         }
 
         button:active {
@@ -91,7 +104,6 @@
             background: #ffffff;
         }
 
-        /* Message temporaire de confirmation */
         .toast {
             position: fixed;
             bottom: 20px;
@@ -118,7 +130,10 @@
     <div class="section">
         <div class="toolbar">
             <h2>Source HTML (Éditable)</h2>
-            <button onclick="copySourceHTML()">Copier le code HTML</button>
+            <div class="button-group">
+                <button class="btn-clear" onclick="clearSourceHTML()">Vider</button>
+                <button onclick="copySourceHTML()">Copier le code HTML</button>
+            </div>
         </div>
         <textarea id="htmlSource" placeholder="Saisissez ou collez votre code HTML ici..."></textarea>
     </div>
@@ -127,12 +142,15 @@
     <div class="section">
         <div class="toolbar">
             <h2>Aperçu Visuel (Éditable)</h2>
-            <button onclick="copyRichText()">Copier le texte rendu (Riche)</button>
+            <div class="button-group">
+                <button class="btn-clear" onclick="clearVisualHTML()">Vider</button>
+                <button onclick="copyRichText()">Copier le texte rendu (Riche)</button>
+            </div>
         </div>
         <div id="htmlVisual" class="wysiwyg" contenteditable="true"></div>
     </div>
 
-    <div id="toast" class="toast">Copié dans le presse-papier !</div>
+    <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
         const htmlSource = document.getElementById('htmlSource');
@@ -154,11 +172,24 @@
             htmlSource.value = htmlVisual.innerHTML;
         });
 
-        // Notification visuelle de copie
+        // Notification visuelle
         function showToast(message) {
             toast.textContent = message;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // Boutons pour vider le contenu
+        function clearSourceHTML() {
+            htmlSource.value = '';
+            htmlVisual.innerHTML = '';
+            showToast("Contenu vidé !");
+        }
+
+        function clearVisualHTML() {
+            htmlVisual.innerHTML = '';
+            htmlSource.value = '';
+            showToast("Contenu vidé !");
         }
 
         // Bouton 1 : Copie le code brut (HTML)
@@ -171,10 +202,20 @@
             }
         }
 
-        // Bouton 2 : Copie le rendu formaté (Presse-papier HTML / Texte enrichi)
+        // Bouton 2 : Copie le rendu visuel (Texte Riche Formaté)
         async function copyRichText() {
             try {
-                const htmlContent = htmlVisual.innerHTML;
+                // Méthode moderne basée sur la sélection DOM :
+                // Force le navigateur à créer un objet de sélection 'texte riche'
+                const range = document.createRange();
+                range.selectNodeContents(htmlVisual);
+                
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                // Tentative via la Clipboard API avec empaquetage HTML strict
+                const htmlContent = `<div>${htmlVisual.innerHTML}</div>`;
                 const textContent = htmlVisual.innerText;
 
                 const blobHtml = new Blob([htmlContent], { type: 'text/html' });
@@ -185,10 +226,21 @@
                     'text/plain': blobText
                 });
 
-                await navigator.clipboard.write(item);
-                showToast("Rendu visuel copié !");
+                await navigator.clipboard.write([item]);
+
+                // Nettoyage de la sélection à l'écran
+                selection.removeAllRanges();
+
+                showToast("Texte riche copié !");
             } catch (err) {
-                console.error('Erreur lors de la copie riche :', err);
+                // Secours (fallback) pour certains navigateurs stricts
+                try {
+                    document.execCommand('copy');
+                    window.getSelection().removeAllRanges();
+                    showToast("Texte riche copié !");
+                } catch (fallbackErr) {
+                    console.error('Erreur lors de la copie riche :', fallbackErr);
+                }
             }
         }
     </script>
