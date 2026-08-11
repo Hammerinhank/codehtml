@@ -5,7 +5,8 @@
   ],
   "promptsMap": {
     "": "",
-    "Un fichier HTML avec mots difficiles pour niveau A2": "Peux-tu me donner une version en html de ce texte avec tous les mots difficile pour un étudiant niveau A2 en vitenamien colorés en orange ?"
+    "Un fichier HTML avec mots difficiles pour niveau A2": "Peux-tu me donner une version en html de ce texte avec tous les mots difficile pour un étudiant niveau A2 en vitenamien colorés en orange ?",
+    "Liste de mots difficiles pour un niveau A2": "Peux-tu me donner une liste de mots à partir de ce texte constituée de tous les mots difficile pour un étudiant niveau A2 en vietnamien ?"
   },
   "selectedValue": "Liste de mots difficiles pour un niveau A2",
   "context": "",
