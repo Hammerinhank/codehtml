@@ -112,6 +112,7 @@
         .button-group {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         button {
@@ -241,11 +242,142 @@
             border: 0;
             visibility: hidden;
         }
+
+        /* Badge de version, bien visible */
+        #versionBadge {
+            position: fixed;
+            top: 8px;
+            right: 8px;
+            background: #1a202c;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 12px;
+            z-index: 10001;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            letter-spacing: 0.5px;
+        }
+
+        /* Section Réglages GitHub */
+        .settings-section {
+            background: #ffffff;
+            border: 1px solid #dcdfe6;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .settings-toolbar {
+            background: #2d3748;
+            color: #fff;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .settings-toolbar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .settings-body {
+            padding: 15px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .settings-body.open {
+            display: flex;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .settings-row label {
+            display: flex;
+            flex-direction: column;
+            font-size: 12px;
+            color: #4a5568;
+            flex: 1;
+            min-width: 160px;
+            gap: 4px;
+        }
+
+        .settings-row input {
+            padding: 8px 10px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .settings-row input:focus {
+            border-color: #3182ce;
+        }
+
+        #syncStatus {
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: #edf2f7;
+            color: #4a5568;
+        }
+
+        #syncStatus.ok { background: #c6f6d5; color: #22543d; }
+        #syncStatus.warn { background: #fefcbf; color: #744210; }
+        #syncStatus.error { background: #fed7d7; color: #742a2a; }
+        #syncStatus.busy { background: #bee3f8; color: #2a4365; }
     </style>
 </head>
 <body>
 
+    <div id="versionBadge">V1</div>
+
     <iframe id="renderHost"></iframe>
+
+    <!-- SECTION RÉGLAGES GITHUB (persistance) -->
+    <div class="settings-section" id="sectionSettings">
+        <div class="settings-toolbar" id="tbSettings" onclick="toggleSettings()">
+            <h2>⚙️ Réglages GitHub (persistance des données)</h2>
+            <span id="syncStatus">Non configuré</span>
+        </div>
+        <div class="settings-body" id="settingsBody">
+            <div class="settings-row">
+                <label>Jeton d'accès GitHub (PAT)
+                    <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off">
+                </label>
+                <label>Utilisateur / Organisation
+                    <input type="text" id="ghOwner" placeholder="ex: Hammerinhank">
+                </label>
+            </div>
+            <div class="settings-row">
+                <label>Nom du dépôt
+                    <input type="text" id="ghRepo" placeholder="ex: mon-depot">
+                </label>
+                <label>Branche
+                    <input type="text" id="ghBranch" placeholder="main" value="main">
+                </label>
+                <label>Chemin du fichier de données
+                    <input type="text" id="ghPath" placeholder="data.json" value="data.json">
+                </label>
+            </div>
+            <div class="button-group">
+                <button onclick="saveSettingsAndReload()">Enregistrer</button>
+                <button class="btn-toggle-fs" onclick="testConnection()">Tester la connexion</button>
+                <button class="btn-add-combo" onclick="pushToGitHub()">Synchroniser maintenant</button>
+            </div>
+            <p style="font-size:11px;color:#718096;">Le jeton reste uniquement dans le stockage local de cet appareil ; il n'est jamais écrit dans le dépôt GitHub. Toutes les autres données de l'application (liste, instructions, contexte, contenu HTML) sont enregistrées dans le fichier ci-dessus du dépôt.</p>
+        </div>
+    </div>
 
     <!-- SECTION COMBO BOX (Ajoutée avant la première fenêtre) -->
     <div class="combo-section">
@@ -258,10 +390,10 @@
         </div>
     </div>
 
-    <!-- NOUVELLE FENÊTRE 1 : Instructions Persistantes (LocalStorage) -->
+    <!-- NOUVELLE FENÊTRE 1 : Instructions Persistantes -->
     <div class="section" id="sectionPrompt">
         <div class="toolbar" id="tbPrompt">
-            <h2>1. Instructions / Prompt (Sauvegarde automatique)</h2>
+            <h2>1. Instructions / Prompt (Sauvegarde GitHub)</h2>
             <div class="button-group">
                 <button class="btn-clear" onclick="clearPromptText()">Vider</button>
                 <button class="btn-paste" onclick="pasteToPrompt()">Coller</button>
@@ -289,7 +421,7 @@
 
     <hr style="border: 0; border-top: 1px solid #dcdfe6; margin: 10px 0;">
 
-    <!-- FENÊTRE 3 : Éditeur de code HTML (Ancienne Fenêtre 1) -->
+    <!-- FENÊTRE 3 : Éditeur de code HTML -->
     <div class="section" id="section1">
         <div class="toolbar" id="tb1">
             <h2>Source HTML (Éditable)</h2>
@@ -316,7 +448,7 @@
         <div id="htmlVisual" class="wysiwyg" contenteditable="true"></div>
     </div>
 
-    <!-- FENÊTRE 5 : Aperçu Monochrome avec texte coloré entre doubles crochets -->
+    <!-- FENÊTRE 5 : Aperçu Monochrome -->
     <div class="section" id="section3">
         <div class="toolbar" id="tb3">
             <h2>Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
@@ -332,6 +464,9 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
+        const VERSION = "V1";
+        document.getElementById('versionBadge').textContent = VERSION;
+
         const customSelect = document.getElementById('customSelect');
         const promptText = document.getElementById('promptText');
         const contextText = document.getElementById('contextText');
@@ -340,57 +475,277 @@
         const htmlProcessed = document.getElementById('htmlProcessed');
         const renderHost = document.getElementById('renderHost');
         const toast = document.getElementById('toast');
+        const syncStatusEl = document.getElementById('syncStatus');
+        const settingsBody = document.getElementById('settingsBody');
 
-        // Variable pour conserver le texte original de la zone prompt avant modification
         let lastPromptText = '';
 
         // -------------------------------------------------------------
-        // PERSISTENCE LOCALSTORAGE (COMBO BOX & PROMPTS ASSOCIÉS)
+        // ÉTAT DE L'APPLICATION (persisté sur GitHub)
         // -------------------------------------------------------------
 
-        const STORAGE_KEY_OPTIONS = 'app_combo_options';
-        const STORAGE_KEY_SELECTED = 'app_combo_selected';
-        const STORAGE_KEY_PROMPTS_MAP = 'app_combo_prompts_map';
-        const STORAGE_KEY_CONTEXT = 'app_persistent_context';
+        const INITIAL_HTML_SAMPLE = `<h3>Titre d'exemple</h3>\n<p>Ceci est un texte en <strong>gras</strong> et en <span style="color: red;">rouge</span>.</p>\n<ul>\n  <li>Élément 1</li>\n  <li>Élément en <font color="blue">bleu</font></li>\n</ul>`;
 
-        // 1. Chargement initial des options et des textes
-        let comboOptions = JSON.parse(localStorage.getItem(STORAGE_KEY_OPTIONS)) || [];
-        let promptsMap = JSON.parse(localStorage.getItem(STORAGE_KEY_PROMPTS_MAP)) || {};
-        let selectedValue = localStorage.getItem(STORAGE_KEY_SELECTED) || '';
-
-        // Chargement initial du contexte persistant
-        const savedContext = localStorage.getItem(STORAGE_KEY_CONTEXT);
-        if (savedContext !== null) {
-            contextText.value = savedContext;
+        function defaultAppData() {
+            return {
+                comboOptions: [],
+                promptsMap: {},
+                selectedValue: '',
+                context: '',
+                htmlSource: INITIAL_HTML_SAMPLE
+            };
         }
 
-        // Sauvegarde automatique du contexte à la saisie
-        contextText.addEventListener('input', () => {
-            localStorage.setItem(STORAGE_KEY_CONTEXT, contextText.value);
-        });
+        let appData = defaultAppData();
+        let lastKnownSha = null;
+        let syncTimer = null;
+
+        // -------------------------------------------------------------
+        // CONFIGURATION GITHUB (le jeton reste EXCLUSIVEMENT en local)
+        // -------------------------------------------------------------
+
+        const LS_TOKEN = 'gh_sync_token';
+        const LS_OWNER = 'gh_sync_owner';
+        const LS_REPO = 'gh_sync_repo';
+        const LS_BRANCH = 'gh_sync_branch';
+        const LS_PATH = 'gh_sync_path';
+        const LS_LOCAL_CACHE = 'app_data_local_cache';
+
+        function getGhConfig() {
+            return {
+                token: localStorage.getItem(LS_TOKEN) || '',
+                owner: localStorage.getItem(LS_OWNER) || '',
+                repo: localStorage.getItem(LS_REPO) || '',
+                branch: localStorage.getItem(LS_BRANCH) || 'main',
+                path: localStorage.getItem(LS_PATH) || 'data.json'
+            };
+        }
+
+        function ghConfigComplete(cfg) {
+            return !!(cfg.token && cfg.owner && cfg.repo);
+        }
+
+        function saveGhConfig() {
+            localStorage.setItem(LS_TOKEN, document.getElementById('ghToken').value.trim());
+            localStorage.setItem(LS_OWNER, document.getElementById('ghOwner').value.trim());
+            localStorage.setItem(LS_REPO, document.getElementById('ghRepo').value.trim());
+            localStorage.setItem(LS_BRANCH, document.getElementById('ghBranch').value.trim() || 'main');
+            localStorage.setItem(LS_PATH, document.getElementById('ghPath').value.trim() || 'data.json');
+        }
+
+        function fillSettingsFields() {
+            const cfg = getGhConfig();
+            document.getElementById('ghToken').value = cfg.token;
+            document.getElementById('ghOwner').value = cfg.owner;
+            document.getElementById('ghRepo').value = cfg.repo;
+            document.getElementById('ghBranch').value = cfg.branch;
+            document.getElementById('ghPath').value = cfg.path;
+        }
+
+        function toggleSettings() {
+            settingsBody.classList.toggle('open');
+        }
+
+        function setSyncStatus(message, kind) {
+            syncStatusEl.textContent = message;
+            syncStatusEl.className = kind || '';
+        }
+
+        function saveSettingsAndReload() {
+            saveGhConfig();
+            settingsBody.classList.remove('open');
+            showToast('Réglages GitHub enregistrés !');
+            loadFromGitHub();
+        }
+
+        async function testConnection() {
+            const cfg = getGhConfig();
+            if (!ghConfigComplete(cfg)) {
+                setSyncStatus('⚠️ Jeton, utilisateur et dépôt requis', 'warn');
+                return;
+            }
+            setSyncStatus('⏳ Test en cours…', 'busy');
+            try {
+                const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${cfg.token}`,
+                        'Accept': 'application/vnd.github+json'
+                    }
+                });
+                if (res.ok) {
+                    setSyncStatus('✓ Connexion au dépôt réussie', 'ok');
+                } else if (res.status === 404) {
+                    setSyncStatus('✗ Dépôt introuvable ou jeton sans accès', 'error');
+                } else if (res.status === 401) {
+                    setSyncStatus('✗ Jeton invalide', 'error');
+                } else {
+                    setSyncStatus(`✗ Erreur (${res.status})`, 'error');
+                }
+            } catch (err) {
+                setSyncStatus('✗ Erreur réseau : ' + err.message, 'error');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // ENCODAGE BASE64 UTF-8
+        // -------------------------------------------------------------
+
+        function b64EncodeUnicode(str) {
+            return btoa(unescape(encodeURIComponent(str)));
+        }
+
+        function b64DecodeUnicode(str) {
+            return decodeURIComponent(escape(atob(str)));
+        }
+
+        // -------------------------------------------------------------
+        // ACCÈS AU FICHIER DE DONNÉES SUR GITHUB
+        // -------------------------------------------------------------
+
+        async function ghGetFile() {
+            const cfg = getGhConfig();
+            const url = `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${encodeURIComponent(cfg.path)}?ref=${encodeURIComponent(cfg.branch)}&_=${Date.now()}`;
+            const res = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${cfg.token}`,
+                    'Accept': 'application/vnd.github+json'
+                }
+            });
+            if (res.status === 404) return { exists: false, sha: null, data: null };
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                throw new Error(`${res.status} ${errJson.message || ''}`);
+            }
+            const json = await res.json();
+            const content = b64DecodeUnicode((json.content || '').replace(/\n/g, ''));
+            return { exists: true, sha: json.sha, data: JSON.parse(content) };
+        }
+
+        async function ghPutFile(dataObj, sha) {
+            const cfg = getGhConfig();
+            const url = `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${encodeURIComponent(cfg.path)}`;
+            const body = {
+                message: `Mise à jour données app (${new Date().toISOString()})`,
+                content: b64EncodeUnicode(JSON.stringify(dataObj, null, 2)),
+                branch: cfg.branch
+            };
+            if (sha) body.sha = sha;
+            const res = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${cfg.token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                throw new Error(`${res.status} ${errJson.message || ''}`);
+            }
+            const json = await res.json();
+            return json.content.sha;
+        }
+
+        function saveLocalCache() {
+            try { localStorage.setItem(LS_LOCAL_CACHE, JSON.stringify(appData)); } catch (e) {}
+        }
+
+        function loadLocalCacheIntoApp() {
+            try {
+                const cached = localStorage.getItem(LS_LOCAL_CACHE);
+                appData = cached ? Object.assign(defaultAppData(), JSON.parse(cached)) : defaultAppData();
+            } catch (e) {
+                appData = defaultAppData();
+            }
+            applyAppDataToUI();
+        }
+
+        async function loadFromGitHub() {
+            const cfg = getGhConfig();
+            if (!ghConfigComplete(cfg)) {
+                setSyncStatus('⚠️ Configuration GitHub requise (Réglages)', 'warn');
+                settingsBody.classList.add('open');
+                loadLocalCacheIntoApp();
+                return;
+            }
+            setSyncStatus('⏳ Chargement depuis GitHub…', 'busy');
+            try {
+                const result = await ghGetFile();
+                if (result.exists) {
+                    appData = Object.assign(defaultAppData(), result.data);
+                    lastKnownSha = result.sha;
+                    setSyncStatus('✓ Chargé depuis GitHub', 'ok');
+                } else {
+                    appData = defaultAppData();
+                    lastKnownSha = null;
+                    setSyncStatus('ℹ️ Aucun fichier trouvé, création…', 'busy');
+                    await pushToGitHub();
+                }
+                saveLocalCache();
+                applyAppDataToUI();
+            } catch (err) {
+                console.error(err);
+                setSyncStatus('✗ Échec chargement (copie locale utilisée) : ' + err.message, 'error');
+                loadLocalCacheIntoApp();
+            }
+        }
+
+        function scheduleSync() {
+            saveLocalCache();
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(pushToGitHub, 1500);
+        }
+
+        async function pushToGitHub() {
+            const cfg = getGhConfig();
+            if (!ghConfigComplete(cfg)) {
+                setSyncStatus('⚠️ Configuration GitHub requise (Réglages)', 'warn');
+                return;
+            }
+            setSyncStatus('⏳ Synchronisation…', 'busy');
+            try {
+                const current = await ghGetFile();
+                const newSha = await ghPutFile(appData, current.sha);
+                lastKnownSha = newSha;
+                setSyncStatus('✓ Synchronisé ' + new Date().toLocaleTimeString('fr-FR'), 'ok');
+            } catch (err) {
+                console.error(err);
+                setSyncStatus('✗ Échec sync : ' + err.message, 'error');
+            }
+        }
+
+        function applyAppDataToUI() {
+            renderSelectOptions();
+            updatePromptForSelection();
+            contextText.value = appData.context || '';
+            htmlSource.value = appData.htmlSource || '';
+            htmlVisual.innerHTML = htmlSource.value;
+            updateProcessedView();
+        }
+
+        // -------------------------------------------------------------
+        // COMBO BOX
+        // -------------------------------------------------------------
 
         function renderSelectOptions() {
             customSelect.innerHTML = '<option value="">-- Sélectionnez un élément --</option>';
-            comboOptions.forEach(opt => {
+            appData.comboOptions.forEach(opt => {
                 const optionEl = document.createElement('option');
                 optionEl.value = opt;
                 optionEl.textContent = opt;
                 customSelect.appendChild(optionEl);
             });
-            customSelect.value = selectedValue;
+            customSelect.value = appData.selectedValue;
         }
 
         function updatePromptForSelection() {
             const currentKey = customSelect.value;
-            const newText = promptsMap[currentKey] || '';
+            const newText = appData.promptsMap[currentKey] || '';
             promptText.value = newText;
             lastPromptText = newText;
         }
 
-        renderSelectOptions();
-        updatePromptForSelection();
-
-        // Ajout d'un nouvel élément
         function addComboItem() {
             const input = document.getElementById('newItemInput');
             const text = input.value.trim();
@@ -400,22 +755,20 @@
                 return;
             }
 
-            if (!comboOptions.includes(text)) {
-                comboOptions.push(text);
-                localStorage.setItem(STORAGE_KEY_OPTIONS, JSON.stringify(comboOptions));
+            if (!appData.comboOptions.includes(text)) {
+                appData.comboOptions.push(text);
             }
 
-            selectedValue = text;
-            localStorage.setItem(STORAGE_KEY_SELECTED, selectedValue);
+            appData.selectedValue = text;
 
             renderSelectOptions();
             updatePromptForSelection();
+            scheduleSync();
 
             input.value = '';
             showToast("Élément ajouté à la liste !");
         }
 
-        // Touche Entrée dans le champ d'ajout
         document.getElementById('newItemInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -423,22 +776,24 @@
             }
         });
 
-        // Changement de sélection dans la liste
         customSelect.addEventListener('change', () => {
-            selectedValue = customSelect.value;
-            localStorage.setItem(STORAGE_KEY_SELECTED, selectedValue);
+            appData.selectedValue = customSelect.value;
             updatePromptForSelection();
+            scheduleSync();
         });
 
-        // Gestion des modifications manuelles (saisie directe et collage) dans la Fenêtre 1 avec confirmation
+        // -------------------------------------------------------------
+        // INSTRUCTIONS / PROMPT
+        // -------------------------------------------------------------
+
         function handlePromptChange() {
             if (promptText.value !== lastPromptText) {
                 const confirmChange = confirm("Voulez-vous vraiment modifier le texte des instructions ?");
                 if (confirmChange) {
                     lastPromptText = promptText.value;
                     const currentKey = customSelect.value;
-                    promptsMap[currentKey] = promptText.value;
-                    localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
+                    appData.promptsMap[currentKey] = promptText.value;
+                    scheduleSync();
                 } else {
                     promptText.value = lastPromptText;
                 }
@@ -454,8 +809,8 @@
                 promptText.value = '';
                 lastPromptText = '';
                 const currentKey = customSelect.value;
-                delete promptsMap[currentKey];
-                localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
+                delete appData.promptsMap[currentKey];
+                scheduleSync();
                 showToast("Instructions vidées !");
             }
         }
@@ -469,8 +824,8 @@
                         promptText.value = text;
                         lastPromptText = text;
                         const currentKey = customSelect.value;
-                        promptsMap[currentKey] = text;
-                        localStorage.setItem(STORAGE_KEY_PROMPTS_MAP, JSON.stringify(promptsMap));
+                        appData.promptsMap[currentKey] = text;
+                        scheduleSync();
                         showToast("Instructions collées !");
                     }
                 }
@@ -479,9 +834,19 @@
             }
         }
 
+        // -------------------------------------------------------------
+        // CONTEXTE
+        // -------------------------------------------------------------
+
+        contextText.addEventListener('input', () => {
+            appData.context = contextText.value;
+            scheduleSync();
+        });
+
         function clearContextText() {
             contextText.value = '';
-            localStorage.removeItem(STORAGE_KEY_CONTEXT);
+            appData.context = '';
+            scheduleSync();
             showToast("Contexte vidé !");
         }
 
@@ -490,7 +855,8 @@
                 const text = await navigator.clipboard.readText();
                 if (text !== undefined) {
                     contextText.value = text;
-                    localStorage.setItem(STORAGE_KEY_CONTEXT, text);
+                    appData.context = text;
+                    scheduleSync();
                     showToast("Contexte collé !");
                 }
             } catch (err) {
@@ -511,20 +877,11 @@
                 return;
             }
 
-            // Concaténation : Contenu 1 + Saut de ligne + Contenu 2
             const combinedQuery = part1 + (part1 && part2 ? "\n" : "") + part2;
             const encodedQuery = encodeURIComponent(combinedQuery);
-            
-            // Ouverture de ChatGPT avec le paramètre 'q'
             const targetUrl = `https://chatgpt.com/?q=${encodedQuery}`;
             window.open(targetUrl, '_blank');
         }
-
-        // Exemple de contenu initial pour la partie HTML
-        const initialContent = `<h3>Titre d'exemple</h3>\n<p>Ceci est un texte en <strong>gras</strong> et en <span style="color: red;">rouge</span>.</p>\n<ul>\n  <li>Élément 1</li>\n  <li>Élément en <font color="blue">bleu</font></li>\n</ul>`;
-        htmlSource.value = initialContent;
-        htmlVisual.innerHTML = initialContent;
-        updateProcessedView();
 
         // -------------------------------------------------------------
         // COLLAGE DIRECT ET SYNCHRONISATION HTML
@@ -536,7 +893,9 @@
                 if (text !== undefined) {
                     htmlSource.value = text;
                     htmlVisual.innerHTML = text;
+                    appData.htmlSource = text;
                     updateProcessedView();
+                    scheduleSync();
                     showToast("Code HTML collé !");
                 }
             } catch (err) {
@@ -547,19 +906,21 @@
         htmlSource.addEventListener('paste', () => {
             setTimeout(() => {
                 htmlVisual.innerHTML = htmlSource.value;
+                appData.htmlSource = htmlSource.value;
                 updateProcessedView();
+                scheduleSync();
                 showToast("Code HTML collé !");
             }, 50);
         });
 
         // -------------------------------------------------------------
-        // GESTION DU PLEIN ÉCRAN & DOUBLE-TAP (CIBLÉ SUR TOUTES LES TOOLBARS)
+        // GESTION DU PLEIN ÉCRAN & DOUBLE-TAP
         // -------------------------------------------------------------
-        
+
         function toggleFullscreen(sectionId) {
             const targetSection = document.getElementById(sectionId);
             const isFullscreen = targetSection.classList.contains('fullscreen');
-            
+
             document.querySelectorAll('.section').forEach(sec => {
                 sec.classList.remove('fullscreen');
                 const btn = sec.querySelector('.btn-toggle-fs');
@@ -656,17 +1017,23 @@
 
         htmlSource.addEventListener('input', () => {
             htmlVisual.innerHTML = htmlSource.value;
+            appData.htmlSource = htmlSource.value;
             updateProcessedView();
+            scheduleSync();
         });
 
         htmlVisual.addEventListener('input', () => {
             htmlSource.value = htmlVisual.innerHTML;
+            appData.htmlSource = htmlVisual.innerHTML;
             updateProcessedView();
+            scheduleSync();
         });
 
         htmlProcessed.addEventListener('input', () => {
             htmlSource.value = htmlProcessed.innerHTML;
             htmlVisual.innerHTML = htmlProcessed.innerHTML;
+            appData.htmlSource = htmlProcessed.innerHTML;
+            scheduleSync();
         });
 
         // -------------------------------------------------------------
@@ -683,6 +1050,8 @@
             htmlSource.value = '';
             htmlVisual.innerHTML = '';
             htmlProcessed.innerHTML = '';
+            appData.htmlSource = '';
+            scheduleSync();
             showToast("Contenu vidé !");
         }
 
@@ -690,6 +1059,8 @@
             htmlVisual.innerHTML = '';
             htmlSource.value = '';
             htmlProcessed.innerHTML = '';
+            appData.htmlSource = '';
+            scheduleSync();
             showToast("Contenu vidé !");
         }
 
@@ -697,12 +1068,14 @@
             htmlProcessed.innerHTML = '';
             htmlSource.value = '';
             htmlVisual.innerHTML = '';
+            appData.htmlSource = '';
+            scheduleSync();
             showToast("Contenu vidé !");
         }
 
         async function copySourceHTML() {
             try {
-                await navigator.clipboard.readText(htmlSource.value);
+                await navigator.clipboard.writeText(htmlSource.value);
                 showToast("Code HTML brut copié !");
             } catch (err) {
                 console.error('Erreur de copie :', err);
@@ -713,7 +1086,7 @@
             try {
                 const range = document.createRange();
                 range.selectNodeContents(element);
-                
+
                 const selection = window.getSelection();
                 selection.removeAllRanges();
                 selection.addRange(range);
@@ -750,6 +1123,20 @@
 
         function copyProcessedRichText() {
             copyRichFromElement(htmlProcessed);
+        }
+
+        // -------------------------------------------------------------
+        // DÉMARRAGE
+        // -------------------------------------------------------------
+
+        fillSettingsFields();
+        applyAppDataToUI(); // affichage immédiat avec les valeurs par défaut / cache local
+        loadFromGitHub();   // puis remplacement par les données GitHub si configuré
+        {
+            const cfgAtStart = getGhConfig();
+            if (!ghConfigComplete(cfgAtStart)) {
+                settingsBody.classList.add('open');
+            }
         }
     </script>
 </body>
