@@ -125,6 +125,10 @@
             font-size: 13px;
             font-weight: 500;
             transition: background-color 0.2s, transform 0.1s;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         button:hover {
@@ -511,7 +515,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V4";
+        const VERSION = "V5";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
