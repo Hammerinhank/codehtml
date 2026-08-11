@@ -511,7 +511,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V3";
+        const VERSION = "V4";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1323,7 +1323,47 @@
                 clearTimeout(tooltipTimer);
                 hideTooltip();
             });
+
+            // Appui prolongé (2 s) sur iPhone / tactile : affiche l'info-bulle
+            // au lieu d'activer le bouton. Un appui plus court déclenche le
+            // bouton normalement.
+            let touchHeld = false;
+
+            el.addEventListener('touchstart', () => {
+                touchHeld = false;
+                clearTimeout(tooltipTimer);
+                tooltipTimer = setTimeout(() => {
+                    touchHeld = true;
+                    showTooltipFor(el);
+                    if (navigator.vibrate) navigator.vibrate(10);
+                }, 2000);
+            }, { passive: true });
+
+            el.addEventListener('touchmove', () => {
+                clearTimeout(tooltipTimer);
+            }, { passive: true });
+
+            el.addEventListener('touchend', (e) => {
+                clearTimeout(tooltipTimer);
+                if (touchHeld) {
+                    // L'info-bulle vient d'être affichée : on annule le clic
+                    // pour ne pas déclencher l'action du bouton par erreur.
+                    e.preventDefault();
+                    setTimeout(hideTooltip, 2500);
+                }
+            });
+
+            el.addEventListener('touchcancel', () => {
+                clearTimeout(tooltipTimer);
+            });
         });
+
+        // Masque l'info-bulle si on touche ailleurs sur l'écran
+        document.addEventListener('touchstart', (e) => {
+            if (!e.target.closest('[data-tooltip]')) {
+                hideTooltip();
+            }
+        }, { passive: true });
 
         // -------------------------------------------------------------
         // DÉMARRAGE
