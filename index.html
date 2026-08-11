@@ -163,6 +163,14 @@
             background-color: #2d3748;
         }
 
+        button.btn-cleanup {
+            background-color: #d69e2e;
+        }
+
+        button.btn-cleanup:hover {
+            background-color: #b7791f;
+        }
+
         /* Style spécifique pour le bouton d'envoi vers ChatGPT */
         .btn-chatgpt {
             background-color: #10a37f;
@@ -410,6 +418,7 @@
             <div class="button-group">
                 <button class="btn-clear" onclick="clearContextText()">Vider</button>
                 <button class="btn-paste" onclick="pasteToContext()">Coller</button>
+                <button class="btn-cleanup" onclick="cleanupConversation()">Nettoyer conversation</button>
                 <button class="btn-toggle-fs" onclick="toggleFullscreen('sectionContext')">Plein écran</button>
             </div>
         </div>
@@ -464,7 +473,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V1";
+        const VERSION = "V2";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -862,6 +871,53 @@
             } catch (err) {
                 showToast("Accès au presse-papier non autorisé");
             }
+        }
+
+        // -------------------------------------------------------------
+        // NETTOYAGE DE CONVERSATION (équivalent du script Google Apps Script)
+        // -------------------------------------------------------------
+
+        function cleanupConversation() {
+            const timeRegex = /^\d{1,2}:\d{2}$/; // ex: 10:03 ou 9:45
+
+            const wordsToRemove = [
+                "This message was deleted",
+                "Thi Thuy N.",
+                "Yến L.",
+                "Huyen Trang N.",
+                "Xuan Dao H.",
+                "Thu P.",
+                "Pham M.",
+                "Chi T.",
+                "Quynh V.",
+                "Henri T.",
+                "Thị Mai Hương L.",
+                "img",
+                "(édité)"
+            ];
+
+            const lines = contextText.value.split(/\r?\n/);
+            const cleanedLines = [];
+
+            for (const rawLine of lines) {
+                const line = rawLine.trim();
+
+                if (line === '') continue;
+                if (timeRegex.test(line)) continue;
+                if (wordsToRemove.some(word => line.includes(word))) continue;
+
+                cleanedLines.push(rawLine);
+            }
+
+            if (cleanedLines.length === 0) {
+                showToast("Rien à conserver après nettoyage");
+                return;
+            }
+
+            contextText.value = cleanedLines.join('\n');
+            appData.context = contextText.value;
+            scheduleSync();
+            showToast(`Conversation nettoyée ! (${lines.length - cleanedLines.length} ligne(s) retirée(s))`);
         }
 
         // -------------------------------------------------------------
