@@ -541,7 +541,7 @@
     <!-- MISE EN FORME - ZONE 1 (liée à la combo box ci-dessus) -->
     <div class="section" id="sectionFormat1">
         <div class="toolbar" id="tbFormat1">
-            <h2>1. Modèle de mise en forme</h2>
+            <h2>3. Modèle de mise en forme</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface le texte du modèle actuellement sélectionné (confirmation demandée)." onclick="clearFormatZone1()">Vider</button>
                 <button class="btn-paste" data-tooltip="Remplace le texte par le contenu du presse-papier (confirmation demandée)." onclick="pasteToFormatZone1()">Coller</button>
@@ -555,7 +555,7 @@
     <!-- MISE EN FORME - ZONE 2 -->
     <div class="section" id="sectionFormat2">
         <div class="toolbar" id="tbFormat2">
-            <h2>2. Texte</h2>
+            <h2>4. Texte</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone2()">Vider</button>
                 <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans cette zone (remplace le contenu existant)." onclick="pasteToFormatZone2()">Coller</button>
@@ -570,7 +570,7 @@
     <!-- MISE EN FORME - ZONE 3 : code HTML du résultat -->
     <div class="section" id="sectionFormat3">
         <div class="toolbar" id="tbFormat3">
-            <h2>3. Résultat (Code HTML)</h2>
+            <h2>5. Résultat (Code HTML)</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface le code HTML ainsi que l'aperçu de la zone 4." onclick="clearFormatZone3()">Vider</button>
                 <button class="btn-paste" data-tooltip="Colle du code HTML du presse-papier ici et met à jour l'aperçu ci-dessous." onclick="pasteToFormatZone3()">Coller</button>
@@ -586,7 +586,7 @@
     <!-- MISE EN FORME - ZONE 4 : aperçu visuel rendu du résultat -->
     <div class="section" id="sectionFormat4">
         <div class="toolbar" id="tbFormat4">
-            <h2>4. Aperçu (Rendu)</h2>
+            <h2>6. Aperçu (Rendu)</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface l'aperçu ainsi que le code HTML de la zone 3." onclick="clearFormatZone4()">Vider</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat4')">Plein écran</button>
@@ -611,7 +611,7 @@
     <!-- FENÊTRE 3 : Éditeur de code HTML -->
     <div class="section" id="section1">
         <div class="toolbar" id="tb1">
-            <h2>Source HTML (Éditable)</h2>
+            <h2>7. Source HTML (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface le code HTML ainsi que l'aperçu visuel et l'aperçu monochrome qui en dépendent." onclick="clearSourceHTML()">Vider</button>
                 <button class="btn-paste" data-tooltip="Colle le code HTML du presse-papier ici et met à jour automatiquement les deux aperçus ci-dessous." onclick="pasteToSourceHTML()">Coller</button>
@@ -626,7 +626,7 @@
     <!-- FENÊTRE 4 : Aperçu visuel éditable (WYSIWYG) -->
     <div class="section" id="section2">
         <div class="toolbar" id="tb2">
-            <h2>Aperçu Visuel (Éditable)</h2>
+            <h2>8. Aperçu Visuel (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface l'aperçu visuel ainsi que le code source et l'aperçu monochrome qui lui sont liés." onclick="clearVisualHTML()">Vider</button>
                 <button class="btn-paste" data-tooltip="Colle du texte ou du HTML directement ici, sans toucher à la zone Source HTML au-dessus." onclick="pasteToVisualHTML()">Coller</button>
@@ -642,7 +642,7 @@
     <!-- FENÊTRE 5 : Aperçu Monochrome -->
     <div class="section" id="section3">
         <div class="toolbar" id="tb3">
-            <h2>Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
+            <h2>9. Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface l'aperçu monochrome ainsi que le code source et l'aperçu visuel qui lui sont liés." onclick="clearProcessedHTML()">Vider</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('section3')">Plein écran</button>
@@ -659,7 +659,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V14";
+        const VERSION = "V15";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
