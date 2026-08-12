@@ -575,10 +575,74 @@
         </div>
     </div>
 
+    <!-- ZONE REPLIABLE : MISE EN FORME -->
+    <div class="collapsible-zone">
+        <div class="zone-title-bar" onclick="toggleZone('zoneFormat')">
+            <h2>🎨 Mise en forme</h2>
+            <span class="zone-arrow" id="zoneFormatArrow">▸</span>
+        </div>
+        <div class="zone-content closed" id="zoneFormatContent">
+
+    <!-- COMBO BOX associée à la 1ère zone de Mise en forme -->
+    <div class="combo-section">
+        <div class="combo-container">
+            <select id="formatSelect">
+                <option value="">-- Sélectionnez un élément --</option>
+            </select>
+            <input type="text" id="newFormatItemInput" placeholder="Intitulé à ajouter dans la liste..." />
+            <button class="btn-add-combo" data-tooltip="Ajoute le texte saisi comme nouvel élément de la liste déroulante, le sélectionne et prépare un texte vierge pour lui." onclick="addFormatComboItem()">Ajouter à la liste</button>
+        </div>
+    </div>
+
+    <!-- MISE EN FORME - ZONE 1 (liée à la combo box ci-dessus) -->
+    <div class="section" id="sectionFormat1">
+        <div class="toolbar" id="tbFormat1">
+            <h2>1. Modèle de mise en forme</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le texte du modèle actuellement sélectionné (confirmation demandée)." onclick="clearFormatZone1()">Vider</button>
+                <button class="btn-paste" data-tooltip="Remplace le texte par le contenu du presse-papier (confirmation demandée)." onclick="pasteToFormatZone1()">Coller</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat1')">Plein écran</button>
+            </div>
+        </div>
+        <div class="zone-desc">Texte du modèle de mise en forme. Un texte différent est mémorisé pour chaque élément de la liste déroulante ci-dessus, comme pour les Instructions en haut de page.</div>
+        <textarea id="formatZone1" placeholder="Saisissez ou collez ici le modèle de mise en forme..."></textarea>
+    </div>
+
+    <!-- MISE EN FORME - ZONE 2 -->
+    <div class="section" id="sectionFormat2">
+        <div class="toolbar" id="tbFormat2">
+            <h2>2. Texte</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone2()">Vider</button>
+                <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans cette zone (remplace le contenu existant)." onclick="pasteToFormatZone2()">Coller</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat2')">Plein écran</button>
+            </div>
+        </div>
+        <div class="zone-desc">Zone de texte libre, sauvegardée sur GitHub comme le reste de l'application.</div>
+        <textarea id="formatZone2" placeholder="Saisissez ou collez du texte ici..."></textarea>
+    </div>
+
+    <!-- MISE EN FORME - ZONE 3 -->
+    <div class="section" id="sectionFormat3">
+        <div class="toolbar" id="tbFormat3">
+            <h2>3. Résultat</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone3()">Vider</button>
+                <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans cette zone (remplace le contenu existant)." onclick="pasteToFormatZone3()">Coller</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat3')">Plein écran</button>
+            </div>
+        </div>
+        <div class="zone-desc">Zone de texte libre, sauvegardée sur GitHub comme le reste de l'application.</div>
+        <textarea id="formatZone3" placeholder="Saisissez ou collez du texte ici..."></textarea>
+    </div>
+
+        </div>
+    </div>
+
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V7";
+        const VERSION = "V8";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -592,7 +656,13 @@
         const syncStatusEl = document.getElementById('syncStatus');
         const settingsBody = document.getElementById('settingsBody');
 
+        const formatSelect = document.getElementById('formatSelect');
+        const formatZone1 = document.getElementById('formatZone1');
+        const formatZone2 = document.getElementById('formatZone2');
+        const formatZone3 = document.getElementById('formatZone3');
+
         let lastPromptText = '';
+        let lastFormatZone1Text = '';
 
         // -------------------------------------------------------------
         // ÉTAT DE L'APPLICATION (persisté sur GitHub)
@@ -608,7 +678,12 @@
                 context: '',
                 htmlSource: INITIAL_HTML_SAMPLE,
                 htmlVisual: INITIAL_HTML_SAMPLE,
-                htmlProcessed: ''
+                htmlProcessed: '',
+                formatComboOptions: [],
+                formatPromptsMap: {},
+                formatSelectedValue: '',
+                formatZone2: '',
+                formatZone3: ''
             };
         }
 
@@ -844,6 +919,10 @@
             } else {
                 htmlProcessed.innerHTML = '';
             }
+            renderFormatSelectOptions();
+            updateFormatZone1ForSelection();
+            formatZone2.value = appData.formatZone2 || '';
+            formatZone3.value = appData.formatZone3 || '';
         }
 
         // -------------------------------------------------------------
@@ -903,6 +982,168 @@
             updatePromptForSelection();
             scheduleSync();
         });
+
+        // -------------------------------------------------------------
+        // MISE EN FORME - COMBO BOX (fonctionne comme la combo du haut)
+        // -------------------------------------------------------------
+
+        function renderFormatSelectOptions() {
+            formatSelect.innerHTML = '<option value="">-- Sélectionnez un élément --</option>';
+            appData.formatComboOptions.forEach(opt => {
+                const optionEl = document.createElement('option');
+                optionEl.value = opt;
+                optionEl.textContent = opt;
+                formatSelect.appendChild(optionEl);
+            });
+            formatSelect.value = appData.formatSelectedValue;
+        }
+
+        function updateFormatZone1ForSelection() {
+            const currentKey = formatSelect.value;
+            const newText = appData.formatPromptsMap[currentKey] || '';
+            formatZone1.value = newText;
+            lastFormatZone1Text = newText;
+        }
+
+        function addFormatComboItem() {
+            const input = document.getElementById('newFormatItemInput');
+            const text = input.value.trim();
+
+            if (text === '') {
+                showToast("Veuillez saisir un intitulé !");
+                return;
+            }
+
+            if (!appData.formatComboOptions.includes(text)) {
+                appData.formatComboOptions.push(text);
+            }
+
+            appData.formatSelectedValue = text;
+
+            renderFormatSelectOptions();
+            updateFormatZone1ForSelection();
+            scheduleSync();
+
+            input.value = '';
+            showToast("Élément ajouté à la liste !");
+        }
+
+        document.getElementById('newFormatItemInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addFormatComboItem();
+            }
+        });
+
+        formatSelect.addEventListener('change', () => {
+            appData.formatSelectedValue = formatSelect.value;
+            updateFormatZone1ForSelection();
+            scheduleSync();
+        });
+
+        function handleFormatZone1Change() {
+            if (formatZone1.value !== lastFormatZone1Text) {
+                const confirmChange = confirm("Voulez-vous vraiment modifier ce texte de mise en forme ?");
+                if (confirmChange) {
+                    lastFormatZone1Text = formatZone1.value;
+                    const currentKey = formatSelect.value;
+                    appData.formatPromptsMap[currentKey] = formatZone1.value;
+                    scheduleSync();
+                } else {
+                    formatZone1.value = lastFormatZone1Text;
+                }
+            }
+        }
+
+        formatZone1.addEventListener('change', handleFormatZone1Change);
+
+        function clearFormatZone1() {
+            if (formatZone1.value === '') return;
+            const confirmClear = confirm("Voulez-vous vraiment vider ce texte ?");
+            if (confirmClear) {
+                formatZone1.value = '';
+                lastFormatZone1Text = '';
+                const currentKey = formatSelect.value;
+                delete appData.formatPromptsMap[currentKey];
+                scheduleSync();
+                showToast("Texte vidé !");
+            }
+        }
+
+        async function pasteToFormatZone1() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text !== undefined) {
+                    const confirmPaste = confirm("Voulez-vous vraiment remplacer ce texte par le contenu du presse-papier ?");
+                    if (confirmPaste) {
+                        formatZone1.value = text;
+                        lastFormatZone1Text = text;
+                        const currentKey = formatSelect.value;
+                        appData.formatPromptsMap[currentKey] = text;
+                        scheduleSync();
+                        showToast("Texte collé !");
+                    }
+                }
+            } catch (err) {
+                showToast("Accès au presse-papier non autorisé");
+            }
+        }
+
+        // -------------------------------------------------------------
+        // MISE EN FORME - ZONES 2 ET 3 (texte libre, sans combo)
+        // -------------------------------------------------------------
+
+        formatZone2.addEventListener('input', () => {
+            appData.formatZone2 = formatZone2.value;
+            scheduleSync();
+        });
+
+        function clearFormatZone2() {
+            formatZone2.value = '';
+            appData.formatZone2 = '';
+            scheduleSync();
+            showToast("Contenu vidé !");
+        }
+
+        async function pasteToFormatZone2() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text !== undefined) {
+                    formatZone2.value = text;
+                    appData.formatZone2 = text;
+                    scheduleSync();
+                    showToast("Texte collé !");
+                }
+            } catch (err) {
+                showToast("Accès au presse-papier non autorisé");
+            }
+        }
+
+        formatZone3.addEventListener('input', () => {
+            appData.formatZone3 = formatZone3.value;
+            scheduleSync();
+        });
+
+        function clearFormatZone3() {
+            formatZone3.value = '';
+            appData.formatZone3 = '';
+            scheduleSync();
+            showToast("Contenu vidé !");
+        }
+
+        async function pasteToFormatZone3() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text !== undefined) {
+                    formatZone3.value = text;
+                    appData.formatZone3 = text;
+                    scheduleSync();
+                    showToast("Texte collé !");
+                }
+            } catch (err) {
+                showToast("Accès au presse-papier non autorisé");
+            }
+        }
 
         // -------------------------------------------------------------
         // INSTRUCTIONS / PROMPT
@@ -1146,7 +1387,7 @@
             }
         });
 
-        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3'].forEach(secId => {
+        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3', 'sectionFormat1', 'sectionFormat2', 'sectionFormat3'].forEach(secId => {
             const section = document.getElementById(secId);
             if (!section) return;
             const toolbar = section.querySelector('.toolbar');
