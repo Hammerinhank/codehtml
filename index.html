@@ -422,6 +422,29 @@
         .zone-content.closed {
             display: none;
         }
+
+        /* Zones de saisie de données préférentielles (Contexte / Texte) :
+           encadrement et fond de couleur pour bien les distinguer des
+           zones de paramétrage. */
+        .data-entry-zone {
+            border: 2px solid #d69e2e;
+            box-shadow: 0 2px 8px rgba(214, 158, 46, 0.2);
+        }
+
+        .data-entry-zone .toolbar {
+            background: #fef3c7;
+            border-bottom-color: #f0c96b;
+        }
+
+        .data-entry-zone .zone-desc {
+            background: #fffbea;
+            border-bottom-color: #f6e3ac;
+            color: #92702a;
+        }
+
+        .data-entry-zone textarea {
+            background: #fffdf6;
+        }
     </style>
 </head>
 <body>
@@ -465,13 +488,13 @@
         </div>
     </div>
 
-    <!-- ZONE REPLIABLE AVANT LE BOUTON ENVOYER VERS CHATGPT -->
+    <!-- ZONE REPLIABLE : PARAMÉTRAGE DES REQUÊTES À CHATGPT -->
     <div class="collapsible-zone">
-        <div class="zone-title-bar" onclick="toggleZone('zoneBefore')">
-            <h2>📝 Préparation de la requête ChatGPT</h2>
-            <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
+        <div class="zone-title-bar" onclick="toggleZone('zoneParams')">
+            <h2>⚙️ Paramétrage des requêtes à ChatGPT</h2>
+            <span class="zone-arrow" id="zoneParamsArrow">▸</span>
         </div>
-        <div class="zone-content closed" id="zoneBeforeContent">
+        <div class="zone-content closed" id="zoneParamsContent">
 
     <!-- SECTION COMBO BOX (Ajoutée avant la première fenêtre) -->
     <div class="combo-section">
@@ -498,8 +521,44 @@
         <textarea id="promptText" placeholder="Entrez vos instructions permanentes ici (ex: Traduis ce texte en anglais...)..."></textarea>
     </div>
 
+    <!-- COMBO BOX associée à la zone « Modèle de mise en forme » -->
+    <div class="combo-section">
+        <div class="combo-container">
+            <select id="formatSelect">
+                <option value="">-- Sélectionnez un élément --</option>
+            </select>
+            <input type="text" id="newFormatItemInput" placeholder="Intitulé à ajouter dans la liste..." />
+            <button class="btn-add-combo" data-tooltip="Ajoute le texte saisi comme nouvel élément de la liste déroulante, le sélectionne et prépare un texte vierge pour lui." onclick="addFormatComboItem()">Ajouter à la liste</button>
+        </div>
+    </div>
+
+    <!-- MISE EN FORME - ZONE 1 (liée à la combo box ci-dessus) -->
+    <div class="section" id="sectionFormat1">
+        <div class="toolbar" id="tbFormat1">
+            <h2>3. Modèle de mise en forme</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le texte du modèle actuellement sélectionné (confirmation demandée)." onclick="clearFormatZone1()">Vider</button>
+                <button class="btn-paste" data-tooltip="Remplace le texte par le contenu du presse-papier (confirmation demandée)." onclick="pasteToFormatZone1()">Coller</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat1')">Plein écran</button>
+            </div>
+        </div>
+        <div class="zone-desc">Texte du modèle de mise en forme. Un texte différent est mémorisé pour chaque élément de la liste déroulante ci-dessus, comme pour les Instructions en haut de page.</div>
+        <textarea id="formatZone1" placeholder="Saisissez ou collez ici le modèle de mise en forme..."></textarea>
+    </div>
+
+        </div>
+    </div>
+
+    <!-- ZONE REPLIABLE AVANT LE BOUTON ENVOYER VERS CHATGPT -->
+    <div class="collapsible-zone">
+        <div class="zone-title-bar" onclick="toggleZone('zoneBefore')">
+            <h2>📝 Préparation de la requête ChatGPT</h2>
+            <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
+        </div>
+        <div class="zone-content closed" id="zoneBeforeContent">
+
     <!-- NOUVELLE FENÊTRE 2 : Contexte / Données à coller -->
-    <div class="section" id="sectionContext">
+    <div class="section data-entry-zone" id="sectionContext">
         <div class="toolbar" id="tbContext">
             <h2>2. Données / Contexte</h2>
             <div class="button-group">
@@ -527,33 +586,8 @@
         </div>
         <div class="zone-content closed" id="zoneFormatContent">
 
-    <!-- COMBO BOX associée à la 1ère zone de Mise en forme -->
-    <div class="combo-section">
-        <div class="combo-container">
-            <select id="formatSelect">
-                <option value="">-- Sélectionnez un élément --</option>
-            </select>
-            <input type="text" id="newFormatItemInput" placeholder="Intitulé à ajouter dans la liste..." />
-            <button class="btn-add-combo" data-tooltip="Ajoute le texte saisi comme nouvel élément de la liste déroulante, le sélectionne et prépare un texte vierge pour lui." onclick="addFormatComboItem()">Ajouter à la liste</button>
-        </div>
-    </div>
-
-    <!-- MISE EN FORME - ZONE 1 (liée à la combo box ci-dessus) -->
-    <div class="section" id="sectionFormat1">
-        <div class="toolbar" id="tbFormat1">
-            <h2>3. Modèle de mise en forme</h2>
-            <div class="button-group">
-                <button class="btn-clear" data-tooltip="Efface le texte du modèle actuellement sélectionné (confirmation demandée)." onclick="clearFormatZone1()">Vider</button>
-                <button class="btn-paste" data-tooltip="Remplace le texte par le contenu du presse-papier (confirmation demandée)." onclick="pasteToFormatZone1()">Coller</button>
-                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat1')">Plein écran</button>
-            </div>
-        </div>
-        <div class="zone-desc">Texte du modèle de mise en forme. Un texte différent est mémorisé pour chaque élément de la liste déroulante ci-dessus, comme pour les Instructions en haut de page.</div>
-        <textarea id="formatZone1" placeholder="Saisissez ou collez ici le modèle de mise en forme..."></textarea>
-    </div>
-
     <!-- MISE EN FORME - ZONE 2 -->
-    <div class="section" id="sectionFormat2">
+    <div class="section data-entry-zone" id="sectionFormat2">
         <div class="toolbar" id="tbFormat2">
             <h2>4. Texte</h2>
             <div class="button-group">
@@ -572,14 +606,14 @@
         <div class="toolbar" id="tbFormat3">
             <h2>5. Résultat (Code HTML)</h2>
             <div class="button-group">
-                <button class="btn-clear" data-tooltip="Efface le code HTML ainsi que l'aperçu de la zone 4." onclick="clearFormatZone3()">Vider</button>
+                <button class="btn-clear" data-tooltip="Efface le code HTML ainsi que l'aperçu de la zone 6." onclick="clearFormatZone3()">Vider</button>
                 <button class="btn-paste" data-tooltip="Colle du code HTML du presse-papier ici et met à jour l'aperçu ci-dessous." onclick="pasteToFormatZone3()">Coller</button>
-                <button class="btn-chatgpt" data-tooltip="2e passe : transforme chaque expression orange (avant les « : ») en lien vers ChatGPT. La requête envoyée est le texte du Modèle (zone 1 / combobox du haut) suivi de l'expression cliquée." onclick="ajouterHyperliensFormat()">🔗 Ajouter Hyperliens ChatGPT</button>
+                <button class="btn-chatgpt" data-tooltip="2e passe : transforme chaque expression orange (avant les « : ») en lien vers ChatGPT. La requête envoyée est le texte du Modèle (zone 3, dans « Paramétrage des requêtes à ChatGPT ») suivi de l'expression cliquée." onclick="ajouterHyperliensFormat()">🔗 Ajouter Hyperliens ChatGPT</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat3')">Plein écran</button>
                 <button data-tooltip="Copie le code HTML brut de cette zone dans le presse-papier." onclick="copyFormatZone3Source()">Copier le code HTML</button>
             </div>
         </div>
-        <div class="zone-desc">Code HTML du résultat (couleur orange avant les « : », titres en gras). Modifiable directement ; toute modification ici met à jour l'aperçu de la zone 4 ci-dessous.</div>
+        <div class="zone-desc">Code HTML du résultat (couleur orange avant les « : », titres en gras). Modifiable directement ; toute modification ici met à jour l'aperçu de la zone 6 ci-dessous.</div>
         <textarea id="formatZone3" placeholder="Le code HTML généré par « Aérer Sections » apparaît ici..."></textarea>
     </div>
 
@@ -588,12 +622,12 @@
         <div class="toolbar" id="tbFormat4">
             <h2>6. Aperçu (Rendu)</h2>
             <div class="button-group">
-                <button class="btn-clear" data-tooltip="Efface l'aperçu ainsi que le code HTML de la zone 3." onclick="clearFormatZone4()">Vider</button>
+                <button class="btn-clear" data-tooltip="Efface l'aperçu ainsi que le code HTML de la zone 5." onclick="clearFormatZone4()">Vider</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat4')">Plein écran</button>
                 <button data-tooltip="Copie le contenu affiché ici avec sa mise en forme (orange, gras, etc.) pour Word/Mail." onclick="copyFormatZone4Rich()">Copier le texte rendu (Riche)</button>
             </div>
         </div>
-        <div class="zone-desc">Rendu visuel du code HTML de la zone 3 : le texte avant « : » apparaît en orange, les titres de section en gras. Éditable ; les modifications ici mettent à jour le code HTML de la zone 3.</div>
+        <div class="zone-desc">Rendu visuel du code HTML de la zone 5 : le texte avant « : » apparaît en orange, les titres de section en gras. Éditable ; les modifications ici mettent à jour le code HTML de la zone 5.</div>
         <div id="formatZone4" class="wysiwyg" contenteditable="true"></div>
     </div>
 
@@ -659,7 +693,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V16";
+        const VERSION = "V17";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1143,8 +1177,8 @@
         // les lignes sans ":" sont des titres de section (mis en gras, avec une
         // ligne vide insérée avant chacun, sauf le tout premier) ; les lignes
         // avec ":" ont leur partie avant ":" colorée en orange, comme dans le
-        // fichier d'origine. Le HTML généré alimente la zone 3 (code source)
-        // et son rendu visuel dans la zone 4.
+        // fichier d'origine. Le HTML généré alimente la zone 5 (code source)
+        // et son rendu visuel dans la zone 6.
         function escapeHtmlFormat(str) {
             return str
                 .replace(/&/g, '&amp;')
@@ -1208,7 +1242,7 @@
 
         // 2e passe de transformation : transforme chaque expression orange
         // (avant les ":") en hyperlien vers ChatGPT. La requête envoyée est le
-        // texte du Modèle (zone 1, piloté par la combobox du haut) suivi de
+        // texte du Modèle (zone 3, dans « Paramétrage des requêtes à ChatGPT ») suivi de
         // l'expression sur laquelle porte le lien.
         function ajouterHyperliensFormat() {
             if (!formatZone3.value.trim()) {
@@ -1252,7 +1286,7 @@
             showToast(`${count} hyperlien(s) ajouté(s) vers ChatGPT !`);
         }
 
-        // Zone 3 (code HTML) <-> Zone 4 (aperçu rendu) : synchronisation
+        // Zone 5 (code HTML) <-> Zone 6 (aperçu rendu) : synchronisation
         // bidirectionnelle, comme Source HTML / Aperçu Visuel plus haut.
 
         formatZone3.addEventListener('input', () => {
