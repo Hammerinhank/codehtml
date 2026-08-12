@@ -519,6 +519,87 @@
     <!-- BOUTON D'ENVOI VERS CHATGPT -->
     <button class="btn-chatgpt" data-tooltip="Ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
 
+    <!-- ZONE REPLIABLE : MISE EN FORME -->
+    <div class="collapsible-zone">
+        <div class="zone-title-bar" onclick="toggleZone('zoneFormat')">
+            <h2>🎨 Mise en forme</h2>
+            <span class="zone-arrow" id="zoneFormatArrow">▸</span>
+        </div>
+        <div class="zone-content closed" id="zoneFormatContent">
+
+    <!-- COMBO BOX associée à la 1ère zone de Mise en forme -->
+    <div class="combo-section">
+        <div class="combo-container">
+            <select id="formatSelect">
+                <option value="">-- Sélectionnez un élément --</option>
+            </select>
+            <input type="text" id="newFormatItemInput" placeholder="Intitulé à ajouter dans la liste..." />
+            <button class="btn-add-combo" data-tooltip="Ajoute le texte saisi comme nouvel élément de la liste déroulante, le sélectionne et prépare un texte vierge pour lui." onclick="addFormatComboItem()">Ajouter à la liste</button>
+        </div>
+    </div>
+
+    <!-- MISE EN FORME - ZONE 1 (liée à la combo box ci-dessus) -->
+    <div class="section" id="sectionFormat1">
+        <div class="toolbar" id="tbFormat1">
+            <h2>1. Modèle de mise en forme</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le texte du modèle actuellement sélectionné (confirmation demandée)." onclick="clearFormatZone1()">Vider</button>
+                <button class="btn-paste" data-tooltip="Remplace le texte par le contenu du presse-papier (confirmation demandée)." onclick="pasteToFormatZone1()">Coller</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat1')">Plein écran</button>
+            </div>
+        </div>
+        <div class="zone-desc">Texte du modèle de mise en forme. Un texte différent est mémorisé pour chaque élément de la liste déroulante ci-dessus, comme pour les Instructions en haut de page.</div>
+        <textarea id="formatZone1" placeholder="Saisissez ou collez ici le modèle de mise en forme..."></textarea>
+    </div>
+
+    <!-- MISE EN FORME - ZONE 2 -->
+    <div class="section" id="sectionFormat2">
+        <div class="toolbar" id="tbFormat2">
+            <h2>2. Texte</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone2()">Vider</button>
+                <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans cette zone (remplace le contenu existant)." onclick="pasteToFormatZone2()">Coller</button>
+                <button class="btn-cleanup" data-tooltip="Reprend le texte de cette zone, sépare les sections (lignes sans « : ») en ajoutant un saut de ligne avant chacune, garde les lignes avec « : » regroupées, et place le résultat dans la zone 3." onclick="aererSectionsFormat()">↕️ Aérer Sections → Zone 3</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat2')">Plein écran</button>
+            </div>
+        </div>
+        <div class="zone-desc">Zone de texte libre, sauvegardée sur GitHub comme le reste de l'application.</div>
+        <textarea id="formatZone2" placeholder="Saisissez ou collez du texte ici..."></textarea>
+    </div>
+
+    <!-- MISE EN FORME - ZONE 3 : code HTML du résultat -->
+    <div class="section" id="sectionFormat3">
+        <div class="toolbar" id="tbFormat3">
+            <h2>3. Résultat (Code HTML)</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le code HTML ainsi que l'aperçu de la zone 4." onclick="clearFormatZone3()">Vider</button>
+                <button class="btn-paste" data-tooltip="Colle du code HTML du presse-papier ici et met à jour l'aperçu ci-dessous." onclick="pasteToFormatZone3()">Coller</button>
+                <button class="btn-chatgpt" data-tooltip="2e passe : transforme chaque expression orange (avant les « : ») en lien vers ChatGPT. La requête envoyée est le texte du Modèle (zone 1 / combobox du haut) suivi de l'expression cliquée." onclick="ajouterHyperliensFormat()">🔗 Ajouter Hyperliens ChatGPT</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat3')">Plein écran</button>
+                <button data-tooltip="Copie le code HTML brut de cette zone dans le presse-papier." onclick="copyFormatZone3Source()">Copier le code HTML</button>
+            </div>
+        </div>
+        <div class="zone-desc">Code HTML du résultat (couleur orange avant les « : », titres en gras). Modifiable directement ; toute modification ici met à jour l'aperçu de la zone 4 ci-dessous.</div>
+        <textarea id="formatZone3" placeholder="Le code HTML généré par « Aérer Sections » apparaît ici..."></textarea>
+    </div>
+
+    <!-- MISE EN FORME - ZONE 4 : aperçu visuel rendu du résultat -->
+    <div class="section" id="sectionFormat4">
+        <div class="toolbar" id="tbFormat4">
+            <h2>4. Aperçu (Rendu)</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface l'aperçu ainsi que le code HTML de la zone 3." onclick="clearFormatZone4()">Vider</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat4')">Plein écran</button>
+                <button data-tooltip="Copie le contenu affiché ici avec sa mise en forme (orange, gras, etc.) pour Word/Mail." onclick="copyFormatZone4Rich()">Copier le texte rendu (Riche)</button>
+            </div>
+        </div>
+        <div class="zone-desc">Rendu visuel du code HTML de la zone 3 : le texte avant « : » apparaît en orange, les titres de section en gras. Éditable ; les modifications ici mettent à jour le code HTML de la zone 3.</div>
+        <div id="formatZone4" class="wysiwyg" contenteditable="true"></div>
+    </div>
+
+        </div>
+    </div>
+
     <!-- ZONE REPLIABLE APRÈS LE BOUTON ENVOYER VERS CHATGPT -->
     <div class="collapsible-zone">
         <div class="zone-title-bar" onclick="toggleZone('zoneAfter')">
@@ -575,74 +656,10 @@
         </div>
     </div>
 
-    <!-- ZONE REPLIABLE : MISE EN FORME -->
-    <div class="collapsible-zone">
-        <div class="zone-title-bar" onclick="toggleZone('zoneFormat')">
-            <h2>🎨 Mise en forme</h2>
-            <span class="zone-arrow" id="zoneFormatArrow">▸</span>
-        </div>
-        <div class="zone-content closed" id="zoneFormatContent">
-
-    <!-- COMBO BOX associée à la 1ère zone de Mise en forme -->
-    <div class="combo-section">
-        <div class="combo-container">
-            <select id="formatSelect">
-                <option value="">-- Sélectionnez un élément --</option>
-            </select>
-            <input type="text" id="newFormatItemInput" placeholder="Intitulé à ajouter dans la liste..." />
-            <button class="btn-add-combo" data-tooltip="Ajoute le texte saisi comme nouvel élément de la liste déroulante, le sélectionne et prépare un texte vierge pour lui." onclick="addFormatComboItem()">Ajouter à la liste</button>
-        </div>
-    </div>
-
-    <!-- MISE EN FORME - ZONE 1 (liée à la combo box ci-dessus) -->
-    <div class="section" id="sectionFormat1">
-        <div class="toolbar" id="tbFormat1">
-            <h2>1. Modèle de mise en forme</h2>
-            <div class="button-group">
-                <button class="btn-clear" data-tooltip="Efface le texte du modèle actuellement sélectionné (confirmation demandée)." onclick="clearFormatZone1()">Vider</button>
-                <button class="btn-paste" data-tooltip="Remplace le texte par le contenu du presse-papier (confirmation demandée)." onclick="pasteToFormatZone1()">Coller</button>
-                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat1')">Plein écran</button>
-            </div>
-        </div>
-        <div class="zone-desc">Texte du modèle de mise en forme. Un texte différent est mémorisé pour chaque élément de la liste déroulante ci-dessus, comme pour les Instructions en haut de page.</div>
-        <textarea id="formatZone1" placeholder="Saisissez ou collez ici le modèle de mise en forme..."></textarea>
-    </div>
-
-    <!-- MISE EN FORME - ZONE 2 -->
-    <div class="section" id="sectionFormat2">
-        <div class="toolbar" id="tbFormat2">
-            <h2>2. Texte</h2>
-            <div class="button-group">
-                <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone2()">Vider</button>
-                <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans cette zone (remplace le contenu existant)." onclick="pasteToFormatZone2()">Coller</button>
-                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat2')">Plein écran</button>
-            </div>
-        </div>
-        <div class="zone-desc">Zone de texte libre, sauvegardée sur GitHub comme le reste de l'application.</div>
-        <textarea id="formatZone2" placeholder="Saisissez ou collez du texte ici..."></textarea>
-    </div>
-
-    <!-- MISE EN FORME - ZONE 3 -->
-    <div class="section" id="sectionFormat3">
-        <div class="toolbar" id="tbFormat3">
-            <h2>3. Résultat</h2>
-            <div class="button-group">
-                <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone3()">Vider</button>
-                <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans cette zone (remplace le contenu existant)." onclick="pasteToFormatZone3()">Coller</button>
-                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat3')">Plein écran</button>
-            </div>
-        </div>
-        <div class="zone-desc">Zone de texte libre, sauvegardée sur GitHub comme le reste de l'application.</div>
-        <textarea id="formatZone3" placeholder="Saisissez ou collez du texte ici..."></textarea>
-    </div>
-
-        </div>
-    </div>
-
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V8";
+        const VERSION = "V14";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -660,6 +677,7 @@
         const formatZone1 = document.getElementById('formatZone1');
         const formatZone2 = document.getElementById('formatZone2');
         const formatZone3 = document.getElementById('formatZone3');
+        const formatZone4 = document.getElementById('formatZone4');
 
         let lastPromptText = '';
         let lastFormatZone1Text = '';
@@ -683,7 +701,8 @@
                 formatPromptsMap: {},
                 formatSelectedValue: '',
                 formatZone2: '',
-                formatZone3: ''
+                formatZone3: '',
+                formatZone4: ''
             };
         }
 
@@ -923,6 +942,7 @@
             updateFormatZone1ForSelection();
             formatZone2.value = appData.formatZone2 || '';
             formatZone3.value = appData.formatZone3 || '';
+            formatZone4.innerHTML = (appData.formatZone4 !== undefined && appData.formatZone4 !== null) ? appData.formatZone4 : formatZone3.value;
         }
 
         // -------------------------------------------------------------
@@ -1119,14 +1139,143 @@
             }
         }
 
+        // Repris du bouton "↕️ Aérer Sections" du Transformateur Couleur :
+        // les lignes sans ":" sont des titres de section (mis en gras, avec une
+        // ligne vide insérée avant chacun, sauf le tout premier) ; les lignes
+        // avec ":" ont leur partie avant ":" colorée en orange, comme dans le
+        // fichier d'origine. Le HTML généré alimente la zone 3 (code source)
+        // et son rendu visuel dans la zone 4.
+        function escapeHtmlFormat(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function aererSectionsFormat() {
+            const lines = formatZone2.value.split(/\r?\n/);
+            const orangeRGB = "rgb(255, 165, 0)";
+            let newHTML = "";
+            let firstNonEmpty = true;
+
+            lines.forEach((rawLine) => {
+                let trimmed = rawLine.trim();
+                if (trimmed.length === 0) return;
+                if (trimmed.startsWith('*')) trimmed = trimmed.slice(1).trim(); // supprime seulement l'étoile
+                if (trimmed.length === 0) return;
+
+                if (!trimmed.includes(':') && !firstNonEmpty) {
+                    newHTML += "<br>"; // ligne vide pour aérer avant une nouvelle section
+                }
+
+                if (trimmed.includes(':')) {
+                    const colonIndex = trimmed.indexOf(':');
+                    const before = escapeHtmlFormat(trimmed.substring(0, colonIndex));
+                    const after = escapeHtmlFormat(trimmed.substring(colonIndex));
+                    newHTML += `<span style="color:${orangeRGB};">${before}</span>${after}<br>`;
+                } else {
+                    newHTML += `<span style="font-weight:bold; font-size:1.25em; display:inline-block; margin-top:5px;">${escapeHtmlFormat(trimmed)}</span><br>`;
+                }
+
+                firstNonEmpty = false;
+            });
+
+            formatZone3.value = newHTML;
+            formatZone4.innerHTML = newHTML;
+            appData.formatZone3 = newHTML;
+            appData.formatZone4 = newHTML;
+            scheduleSync();
+            showToast("Texte aéré et mis en forme → zones 3 et 4 !");
+        }
+
+        // Repris de isElementOrange() du Transformateur Couleur : détecte les
+        // spans orange générés par aererSectionsFormat() (à ne pas confondre
+        // avec les titres en gras).
+        function isFormatSpanOrange(el) {
+            if (!el.style || !el.style.color) return false;
+            const match = el.style.color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/i);
+            if (!match) return false;
+            const r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
+            return r > 200 && g > 100 && g < 190;
+        }
+
+        // 2e passe de transformation : transforme chaque expression orange
+        // (avant les ":") en hyperlien vers ChatGPT. La requête envoyée est le
+        // texte du Modèle (zone 1, piloté par la combobox du haut) suivi de
+        // l'expression sur laquelle porte le lien.
+        function ajouterHyperliensFormat() {
+            if (!formatZone3.value.trim()) {
+                showToast("La zone 3 (Résultat) est vide — lancez d'abord « Aérer Sections ».");
+                return;
+            }
+
+            const temp = document.createElement('div');
+            temp.innerHTML = formatZone3.value;
+
+            const modele = formatZone1.value.trim();
+            let count = 0;
+
+            temp.querySelectorAll('span').forEach(span => {
+                if (!isFormatSpanOrange(span)) return;
+                const text = span.textContent.trim();
+                if (text.length === 0) return;
+
+                const question = modele ? `${modele} ${text}` : text;
+                const link = document.createElement('a');
+                link.href = 'https://chatgpt.com/?q=' + encodeURIComponent(question);
+                link.target = '_blank';
+                link.style.color = span.style.color;
+                link.style.textDecoration = 'underline';
+                link.textContent = span.textContent;
+                span.parentNode.replaceChild(link, span);
+                count++;
+            });
+
+            if (count === 0) {
+                showToast("Aucune expression orange trouvée dans le Résultat (zone 3).");
+                return;
+            }
+
+            const newHTML = temp.innerHTML;
+            formatZone3.value = newHTML;
+            formatZone4.innerHTML = newHTML;
+            appData.formatZone3 = newHTML;
+            appData.formatZone4 = newHTML;
+            scheduleSync();
+            showToast(`${count} hyperlien(s) ajouté(s) vers ChatGPT !`);
+        }
+
+        // Zone 3 (code HTML) <-> Zone 4 (aperçu rendu) : synchronisation
+        // bidirectionnelle, comme Source HTML / Aperçu Visuel plus haut.
+
         formatZone3.addEventListener('input', () => {
+            formatZone4.innerHTML = formatZone3.value;
             appData.formatZone3 = formatZone3.value;
+            appData.formatZone4 = formatZone3.value;
+            scheduleSync();
+        });
+
+        formatZone4.addEventListener('input', () => {
+            formatZone3.value = formatZone4.innerHTML;
+            appData.formatZone3 = formatZone4.innerHTML;
+            appData.formatZone4 = formatZone4.innerHTML;
             scheduleSync();
         });
 
         function clearFormatZone3() {
             formatZone3.value = '';
+            formatZone4.innerHTML = '';
             appData.formatZone3 = '';
+            appData.formatZone4 = '';
+            scheduleSync();
+            showToast("Contenu vidé !");
+        }
+
+        function clearFormatZone4() {
+            formatZone4.innerHTML = '';
+            formatZone3.value = '';
+            appData.formatZone3 = '';
+            appData.formatZone4 = '';
             scheduleSync();
             showToast("Contenu vidé !");
         }
@@ -1136,13 +1285,28 @@
                 const text = await navigator.clipboard.readText();
                 if (text !== undefined) {
                     formatZone3.value = text;
+                    formatZone4.innerHTML = text;
                     appData.formatZone3 = text;
+                    appData.formatZone4 = text;
                     scheduleSync();
-                    showToast("Texte collé !");
+                    showToast("Code HTML collé !");
                 }
             } catch (err) {
                 showToast("Accès au presse-papier non autorisé");
             }
+        }
+
+        async function copyFormatZone3Source() {
+            try {
+                await navigator.clipboard.writeText(formatZone3.value);
+                showToast("Code HTML brut copié !");
+            } catch (err) {
+                console.error('Erreur de copie :', err);
+            }
+        }
+
+        function copyFormatZone4Rich() {
+            copyRichFromElement(formatZone4);
         }
 
         // -------------------------------------------------------------
@@ -1387,7 +1551,7 @@
             }
         });
 
-        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3', 'sectionFormat1', 'sectionFormat2', 'sectionFormat3'].forEach(secId => {
+        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3', 'sectionFormat1', 'sectionFormat2', 'sectionFormat3', 'sectionFormat4'].forEach(secId => {
             const section = document.getElementById(secId);
             if (!section) return;
             const toolbar = section.querySelector('.toolbar');
