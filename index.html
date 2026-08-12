@@ -445,6 +445,18 @@
         .data-entry-zone textarea {
             background: #fffdf6;
         }
+
+        /* Encadrement de chaque groupe combobox + zone associée, dans la
+           zone de Paramétrage des requêtes à ChatGPT. */
+        .param-group {
+            border: 2px solid #90cdf4;
+            border-radius: 8px;
+            padding: 15px;
+            background: #ebf8ff;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
     </style>
 </head>
 <body>
@@ -496,6 +508,8 @@
         </div>
         <div class="zone-content closed" id="zoneParamsContent">
 
+    <div class="param-group">
+
     <!-- SECTION COMBO BOX (Ajoutée avant la première fenêtre) -->
     <div class="combo-section">
         <div class="combo-container">
@@ -521,6 +535,10 @@
         <textarea id="promptText" placeholder="Entrez vos instructions permanentes ici (ex: Traduis ce texte en anglais...)..."></textarea>
     </div>
 
+    </div>
+
+    <div class="param-group">
+
     <!-- COMBO BOX associée à la zone « Modèle de mise en forme » -->
     <div class="combo-section">
         <div class="combo-container">
@@ -544,6 +562,8 @@
         </div>
         <div class="zone-desc">Texte du modèle de mise en forme. Un texte différent est mémorisé pour chaque élément de la liste déroulante ci-dessus, comme pour les Instructions en haut de page.</div>
         <textarea id="formatZone1" placeholder="Saisissez ou collez ici le modèle de mise en forme..."></textarea>
+    </div>
+
     </div>
 
         </div>
@@ -693,7 +713,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V17";
+        const VERSION = "V18";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
