@@ -20,7 +20,7 @@
   ],
   "formatPromptsMap": {},
   "formatSelectedValue": "Test",
-  "formatZone2": "Gggggggg\nFg:ggggggg",
+  "formatZone2": "",
   "formatZone3": "<span style=\"font-weight:bold; font-size:1.25em; display:inline-block; margin-top:5px;\">Gggggggg</span><br><span style=\"color:rgb(255, 165, 0);\">Fg</span>:ggggggg<br>",
   "formatZone4": "<span style=\"font-weight:bold; font-size:1.25em; display:inline-block; margin-top:5px;\">Gggggggg</span><br><span style=\"color:rgb(255, 165, 0);\">Fg</span>:ggggggg<br>"
 }
