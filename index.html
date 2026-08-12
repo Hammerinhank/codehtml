@@ -469,9 +469,9 @@
     <div class="collapsible-zone">
         <div class="zone-title-bar" onclick="toggleZone('zoneBefore')">
             <h2>📝 Préparation de la requête ChatGPT</h2>
-            <span class="zone-arrow" id="zoneBeforeArrow">▾</span>
+            <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
         </div>
-        <div class="zone-content" id="zoneBeforeContent">
+        <div class="zone-content closed" id="zoneBeforeContent">
 
     <!-- SECTION COMBO BOX (Ajoutée avant la première fenêtre) -->
     <div class="combo-section">
@@ -523,9 +523,9 @@
     <div class="collapsible-zone">
         <div class="zone-title-bar" onclick="toggleZone('zoneAfter')">
             <h2>🛠️ Éditeur & Aperçus HTML</h2>
-            <span class="zone-arrow" id="zoneAfterArrow">▾</span>
+            <span class="zone-arrow" id="zoneAfterArrow">▸</span>
         </div>
-        <div class="zone-content" id="zoneAfterContent">
+        <div class="zone-content closed" id="zoneAfterContent">
 
     <!-- FENÊTRE 3 : Éditeur de code HTML -->
     <div class="section" id="section1">
@@ -578,7 +578,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V6";
+        const VERSION = "V7";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
