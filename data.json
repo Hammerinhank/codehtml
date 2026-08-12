@@ -9,7 +9,7 @@
     "Un fichier HTML avec mots difficiles pour niveau A2": "Peux-tu me donner une version en html de ce texte avec tous les mots difficile pour un étudiant niveau A2 en vitenamien colorés en orange ?",
     "Liste de mots difficiles pour un niveau A2": "Peux-tu me donner une liste de mots à partir de ce texte constituée de tous les mots difficile pour un étudiant niveau A2 en vietnamien ? Pour faire ton analyse, ne retient que les ligne qui sont exclusivement en vietnamien. Peux-tu produire un fichier HTML avec un hyperlien sur chaque partie vietnamienne (à gauche des \":\") un hyperlien vers chatGPT qui demande à chatGPT d'expliquer la signification du mot ou de l'expression en précisant en plus la signification de chacune des syllabes prises individuellement. Peux-tu regrouper ces mots par catégories thematiques. Mets les titres dans une police particulère : en gras : police plus grande, etc. Utilise du code HTML qui \"résiste\" lors des copier coller dans une page google site, que le formatage du texte ne soit pas perdu."
   },
-  "selectedValue": "Extraire un liste de mots A2",
+  "selectedValue": "Liste de mots difficiles pour un niveau A2",
   "context": "",
   "htmlSource": "",
   "htmlVisual": "",
