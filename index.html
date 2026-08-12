@@ -559,7 +559,7 @@
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone2()">Vider</button>
                 <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans cette zone (remplace le contenu existant)." onclick="pasteToFormatZone2()">Coller</button>
-                <button class="btn-cleanup" data-tooltip="Reprend le texte de cette zone, sépare les sections (lignes sans « : ») en ajoutant un saut de ligne avant chacune, garde les lignes avec « : » regroupées, et place le résultat dans la zone 3." onclick="aererSectionsFormat()">↕️ Aérer Sections → Zone 3</button>
+                <button class="btn-cleanup" data-tooltip="Reprend le texte de cette zone, sépare les sections (lignes sans « : ») en ajoutant un saut de ligne avant chacune, garde les lignes avec « : » regroupées, place le résultat dans la zone 5, puis ajoute automatiquement les hyperliens ChatGPT sur les expressions oranges (zone 5 et 6)." onclick="aererSectionsFormat()">↕️ Aérer + Hyperliens → Zones 5-6</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat2')">Plein écran</button>
             </div>
         </div>
@@ -659,7 +659,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V15";
+        const VERSION = "V16";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1184,8 +1184,15 @@
             formatZone4.innerHTML = newHTML;
             appData.formatZone3 = newHTML;
             appData.formatZone4 = newHTML;
-            scheduleSync();
-            showToast("Texte aéré et mis en forme → zones 3 et 4 !");
+
+            if (newHTML.trim()) {
+                // Enchaîne automatiquement le traitement "Ajouter Hyperliens"
+                // sur le résultat qui vient d'être généré (zones 5 et 6).
+                ajouterHyperliensFormat();
+            } else {
+                scheduleSync();
+                showToast("Texte aéré et mis en forme → zones 5 et 6 !");
+            }
         }
 
         // Repris de isElementOrange() du Transformateur Couleur : détecte les
@@ -1205,7 +1212,7 @@
         // l'expression sur laquelle porte le lien.
         function ajouterHyperliensFormat() {
             if (!formatZone3.value.trim()) {
-                showToast("La zone 3 (Résultat) est vide — lancez d'abord « Aérer Sections ».");
+                showToast("La zone 5 (Résultat) est vide — lancez d'abord « Aérer + Hyperliens »");
                 return;
             }
 
@@ -1232,7 +1239,7 @@
             });
 
             if (count === 0) {
-                showToast("Aucune expression orange trouvée dans le Résultat (zone 3).");
+                showToast("Aucune expression orange trouvée dans le Résultat (zone 5).");
                 return;
             }
 
