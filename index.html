@@ -200,6 +200,15 @@
             transition: background-color 0.2s ease;
         }
 
+        /* Mise en évidence persistante (vert pur très lumineux) du bouton
+           "Coller résultat", tant qu'aucune autre action significative n'a
+           été effectuée après un clic sur "Envoyer vers ChatGPT". */
+        .btn-highlight-green {
+            background-color: #00e676 !important;
+            box-shadow: 0 0 10px rgba(0, 230, 118, 0.7);
+            transition: background-color 0.2s ease;
+        }
+
         button:active {
             transform: scale(0.98);
         }
@@ -667,7 +676,7 @@
     <!-- BOUTON D'ENVOI VERS CHATGPT + BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
     <div class="action-row">
         <button class="btn-chatgpt btn-flex" id="btnSendChatGPT" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
-        <button class="btn-paste btn-flex" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 6 dans le presse-papier." onclick="pasteAndCopyRendered()">Coller résultat</button>
+        <button class="btn-paste btn-flex" id="btnPasteResult" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 7 dans le presse-papier." onclick="pasteAndCopyRendered()">Coller résultat</button>
     </div>
 
     <!-- ZONE REPLIABLE : MISE EN FORME -->
@@ -740,8 +749,8 @@
         </div>
     </div>
 
-    <!-- BOUTON COPIE RAPIDE DU CONTENU DE LA FENÊTRE 6 (hors zone Mise en forme) -->
-    <button class="btn-chatgpt btn-full-width" id="btnCopyZone6" data-tooltip="Copie le contenu actuel de la fenêtre 6 (Aperçu Rendu) dans le presse-papier, avec sa mise en forme (orange, gras, etc.) pour Word/Mail." onclick="copyFormatZone4Rich()">📋 Copier le texte rendu (Zone 6)</button>
+    <!-- BOUTON COPIE RAPIDE DU CONTENU DE LA FENÊTRE 7 (hors zone Mise en forme) -->
+    <button class="btn-chatgpt btn-full-width" id="btnCopyZone7" data-tooltip="Copie le contenu actuel de la fenêtre 7 (Memo A2 / Conversation) dans le presse-papier, avec sa mise en forme." onclick="copyFormatZone5Rich()">📋 Copier le texte rendu (Zone 7)</button>
 
     </div>
 
@@ -804,7 +813,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V43";
+        const VERSION = "V44";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1291,10 +1300,10 @@
         }
 
         // Met en évidence temporairement (2 s) le bouton "Copier le texte
-        // rendu (Zone 6)" pour signaler qu'il vient d'être déclenché
+        // rendu (Zone 7)" pour signaler qu'il vient d'être déclenché
         // automatiquement.
-        function flashCopyZone6Button() {
-            const btn = document.getElementById('btnCopyZone6');
+        function flashCopyZone7Button() {
+            const btn = document.getElementById('btnCopyZone7');
             if (!btn) return;
             btn.classList.add('btn-flash');
             setTimeout(() => btn.classList.remove('btn-flash'), 2000);
@@ -1310,8 +1319,8 @@
         // Enchaîne : collage dans la zone 4 (Texte), puis "Aérer + Hyperliens"
         // (zones 5-6), construction de la zone 7 (contenu de la zone 6 après
         // « Memo A2 », contenu de la zone 2 après « Conversation »), puis
-        // copie automatique du rendu de la zone 6 dans le presse-papier — en
-        // signalant visuellement le bouton "Copier le texte rendu (Zone 6)".
+        // copie automatique du rendu de la zone 7 dans le presse-papier — en
+        // signalant visuellement le bouton "Copier le texte rendu (Zone 7)".
         async function pasteAndCopyRendered() {
             const pasted = await pasteToFormatZone2();
             if (!pasted) return;
@@ -1324,8 +1333,8 @@
             appData.formatZone5 = zone7Content;
             scheduleSync();
 
-            flashCopyZone6Button();
-            copyFormatZone4Rich();
+            flashCopyZone7Button();
+            copyFormatZone5Rich();
         }
 
         // Repris du bouton "↕️ Aérer Sections" du Transformateur Couleur :
@@ -1734,7 +1743,30 @@
             const encodedQuery = encodeURIComponent(combinedQuery);
             const targetUrl = `https://chatgpt.com/?q=${encodedQuery}`;
             window.open(targetUrl, '_blank');
+
+            highlightPasteResultButton();
         }
+
+        // Fait passer le bouton "Coller résultat" en vert pur très lumineux,
+        // pour signaler que "Envoyer vers ChatGPT" vient d'être actionné.
+        function highlightPasteResultButton() {
+            const btn = document.getElementById('btnPasteResult');
+            if (btn) btn.classList.add('btn-highlight-green');
+        }
+
+        // Ramène le bouton "Coller résultat" à sa couleur normale.
+        function clearPasteResultHighlight() {
+            const btn = document.getElementById('btnPasteResult');
+            if (btn) btn.classList.remove('btn-highlight-green');
+        }
+
+        // Toute autre action significative (clic sur un autre bouton, en
+        // particulier "Coller résultat" lui-même) éteint la mise en évidence.
+        document.addEventListener('click', (e) => {
+            const clickedButton = e.target.closest('button');
+            if (!clickedButton || clickedButton.id === 'btnSendChatGPT') return;
+            clearPasteResultHighlight();
+        });
 
         // -------------------------------------------------------------
         // COLLAGE DIRECT ET SYNCHRONISATION HTML
