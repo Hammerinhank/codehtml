@@ -20,7 +20,7 @@
     "Demande d’explication simple"
   ],
   "formatPromptsMap": {
-    "Demande d’explication simple": "Peux-tu m’expliquer ce mot : ",
+    "Demande d’explication simple": "Peux-tu m’expliquer ce mot (si ce mot a plusieurs syllabes, explique moi aussi le sens de chacune d’entre elles prises séparément): ",
     "Test": "Test"
   },
   "formatSelectedValue": "Demande d’explication simple",
