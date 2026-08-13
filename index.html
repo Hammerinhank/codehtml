@@ -704,7 +704,7 @@
                 <button data-tooltip="Copie le contenu affiché ici avec sa mise en forme." onclick="copyFormatZone5Rich()">Copier le texte rendu (Riche)</button>
             </div>
         </div>
-        <div class="zone-desc">En-têtes fixes : « Memo A2 » suivi du contenu de la zone 6, puis « Conversation » suivi du contenu de la zone 4 — reconstruites automatiquement ici à chaque fois que le bouton « Coller résultat » termine son traitement.</div>
+        <div class="zone-desc">En-têtes fixes : « Memo A2 » suivi du contenu de la zone 6, puis « Conversation » suivi du contenu de la zone 2 — reconstruites automatiquement ici à chaque fois que le bouton « Coller résultat » termine son traitement.</div>
         <div id="formatZone5" class="wysiwyg" contenteditable="true"></div>
     </div>
 
@@ -775,7 +775,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V41";
+        const VERSION = "V42";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1280,7 +1280,7 @@
 
         // Enchaîne : collage dans la zone 4 (Texte), puis "Aérer + Hyperliens"
         // (zones 5-6), construction de la zone 7 (contenu de la zone 6 après
-        // « Memo A2 », contenu de la zone 4 après « Conversation »), puis
+        // « Memo A2 », contenu de la zone 2 après « Conversation »), puis
         // copie automatique du rendu de la zone 6 dans le presse-papier — en
         // signalant visuellement le bouton "Copier le texte rendu (Zone 6)".
         async function pasteAndCopyRendered() {
@@ -1289,8 +1289,8 @@
             aererSectionsFormat();
 
             const zone6Content = formatZone4.innerHTML;
-            const zone4Content = escapeHtmlFormat(formatZone2.value).replace(/\r?\n/g, '<br>');
-            const zone7Content = HEADER_MEMO_A2 + zone6Content + HEADER_CONVERSATION + zone4Content;
+            const zone2Content = escapeHtmlFormat(contextText.value).replace(/\r?\n/g, '<br>');
+            const zone7Content = HEADER_MEMO_A2 + zone6Content + HEADER_CONVERSATION + zone2Content;
             formatZone5.innerHTML = zone7Content;
             appData.formatZone5 = zone7Content;
             scheduleSync();
