@@ -625,6 +625,7 @@
                 <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans la zone Contexte (remplace le contenu existant)." onclick="pasteToContext()">Coller</button>
                 <button class="btn-cleanup" data-tooltip="Retire les lignes vides, les lignes qui ne sont qu'une heure (ex: 10:03), et les lignes contenant les noms/mentions de la liste de filtrage." onclick="cleanupConversation()">Nettoyer conversation</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionContext')">Plein écran</button>
+                <button data-tooltip="Copie le contenu de la zone Contexte dans le presse-papier." onclick="copyContextText()">Copier</button>
             </div>
         </div>
         <div class="zone-desc">Contenu ou données à traiter (ex : export d'une conversation). Ce texte est envoyé après les instructions vers ChatGPT, et peut être nettoyé automatiquement avant l'envoi.</div>
@@ -760,7 +761,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V34";
+        const VERSION = "V35";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1515,6 +1516,15 @@
             appData.context = '';
             scheduleSync();
             showToast("Contexte vidé !");
+        }
+
+        async function copyContextText() {
+            try {
+                await navigator.clipboard.writeText(contextText.value);
+                showToast("Contenu du Contexte copié !");
+            } catch (err) {
+                console.error('Erreur de copie :', err);
+            }
         }
 
         // Convertit un texte contenant des balises HTML (parfois renvoyées par
