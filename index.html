@@ -190,6 +190,13 @@
             background-color: #2f855a;
         }
 
+        /* Mise en évidence temporaire (2 s) du bouton "Envoyer vers ChatGPT"
+           quand il est déclenché automatiquement par un autre bouton. */
+        .btn-flash {
+            background-color: #ed8936 !important;
+            transition: background-color 0.2s ease;
+        }
+
         button:active {
             transform: scale(0.98);
         }
@@ -599,7 +606,7 @@
     <div class="workflow-group">
 
     <!-- BOUTON COLLAGE RAPIDE DANS LA FENÊTRE 2 (hors zone Préparation de la requête) -->
-    <button class="btn-paste btn-full-width" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), remplace le contenu existant." onclick="pasteToContext()">Coller</button>
+    <button class="btn-paste btn-full-width" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis déclenche « Envoyer vers ChatGPT »." onclick="pasteCleanAndSend()">Coller, nettoyer et envoyer vers ChatGPT</button>
 
     <!-- ZONE REPLIABLE AVANT LE BOUTON ENVOYER VERS CHATGPT -->
     <div class="collapsible-zone">
@@ -629,7 +636,7 @@
 
     <!-- BOUTON D'ENVOI VERS CHATGPT + BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
     <div class="action-row">
-        <button class="btn-chatgpt btn-flex" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
+        <button class="btn-chatgpt btn-flex" id="btnSendChatGPT" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
         <button class="btn-paste btn-flex" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), remplace le contenu existant." onclick="pasteToFormatZone2()">Coller résultat</button>
     </div>
 
@@ -753,7 +760,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V31";
+        const VERSION = "V32";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1495,10 +1502,32 @@
                     appData.context = text;
                     scheduleSync();
                     showToast("Contexte collé !");
+                    return true;
                 }
+                return false;
             } catch (err) {
                 showToast("Accès au presse-papier non autorisé");
+                return false;
             }
+        }
+
+        // Met en évidence temporairement (2 s) le bouton "Envoyer vers ChatGPT"
+        // pour signaler qu'il vient d'être déclenché automatiquement.
+        function flashSendButton() {
+            const btn = document.getElementById('btnSendChatGPT');
+            if (!btn) return;
+            btn.classList.add('btn-flash');
+            setTimeout(() => btn.classList.remove('btn-flash'), 2000);
+        }
+
+        // Enchaîne : collage dans le Contexte (zone 2), nettoyage automatique
+        // (via sendToChatGPT, qui nettoie déjà systématiquement), puis envoi
+        // vers ChatGPT — en signalant visuellement le bouton "Envoyer".
+        async function pasteCleanAndSend() {
+            const pasted = await pasteToContext();
+            if (!pasted) return;
+            flashSendButton();
+            sendToChatGPT();
         }
 
         // -------------------------------------------------------------
