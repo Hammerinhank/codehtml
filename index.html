@@ -637,7 +637,7 @@
     <!-- BOUTON D'ENVOI VERS CHATGPT + BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
     <div class="action-row">
         <button class="btn-chatgpt btn-flex" id="btnSendChatGPT" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
-        <button class="btn-paste btn-flex" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), remplace le contenu existant." onclick="pasteToFormatZone2()">Coller résultat</button>
+        <button class="btn-paste btn-flex" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), puis copie automatiquement le rendu de la zone 6 dans le presse-papier." onclick="pasteAndCopyRendered()">Coller résultat</button>
     </div>
 
     <!-- ZONE REPLIABLE : MISE EN FORME -->
@@ -697,7 +697,7 @@
     </div>
 
     <!-- BOUTON COPIE RAPIDE DU CONTENU DE LA FENÊTRE 6 (hors zone Mise en forme) -->
-    <button class="btn-chatgpt btn-full-width" data-tooltip="Copie le contenu actuel de la fenêtre 6 (Aperçu Rendu) dans le presse-papier, avec sa mise en forme (orange, gras, etc.) pour Word/Mail." onclick="copyFormatZone4Rich()">📋 Copier le texte rendu (Zone 6)</button>
+    <button class="btn-chatgpt btn-full-width" id="btnCopyZone6" data-tooltip="Copie le contenu actuel de la fenêtre 6 (Aperçu Rendu) dans le presse-papier, avec sa mise en forme (orange, gras, etc.) pour Word/Mail." onclick="copyFormatZone4Rich()">📋 Copier le texte rendu (Zone 6)</button>
 
     </div>
 
@@ -760,7 +760,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V33";
+        const VERSION = "V34";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1234,10 +1234,33 @@
                     appData.formatZone2 = text;
                     scheduleSync();
                     showToast("Texte collé !");
+                    return true;
                 }
+                return false;
             } catch (err) {
                 showToast("Accès au presse-papier non autorisé");
+                return false;
             }
+        }
+
+        // Met en évidence temporairement (2 s) le bouton "Copier le texte
+        // rendu (Zone 6)" pour signaler qu'il vient d'être déclenché
+        // automatiquement.
+        function flashCopyZone6Button() {
+            const btn = document.getElementById('btnCopyZone6');
+            if (!btn) return;
+            btn.classList.add('btn-flash');
+            setTimeout(() => btn.classList.remove('btn-flash'), 2000);
+        }
+
+        // Enchaîne : collage dans la zone 4 (Texte), puis copie automatique
+        // du rendu de la zone 6 dans le presse-papier — en signalant
+        // visuellement le bouton "Copier le texte rendu (Zone 6)".
+        async function pasteAndCopyRendered() {
+            const pasted = await pasteToFormatZone2();
+            if (!pasted) return;
+            flashCopyZone6Button();
+            copyFormatZone4Rich();
         }
 
         // Repris du bouton "↕️ Aérer Sections" du Transformateur Couleur :
