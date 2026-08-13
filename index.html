@@ -694,6 +694,20 @@
         <div id="formatZone4" class="wysiwyg" contenteditable="true"></div>
     </div>
 
+    <!-- MISE EN FORME - ZONE 5 : en-tête fixe injectée après traitement (bouton "Coller résultat") -->
+    <div class="section" id="sectionFormat5">
+        <div class="toolbar" id="tbFormat5">
+            <h2>7. En-tête (Mémo)</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone5()">Vider</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat5')">Plein écran</button>
+                <button data-tooltip="Copie le contenu affiché ici avec sa mise en forme." onclick="copyFormatZone5Rich()">Copier le texte rendu (Riche)</button>
+            </div>
+        </div>
+        <div class="zone-desc">En-tête fixe (« Memo A2 » / « Conversation »), insérée automatiquement ici, mise en forme, à chaque fois que le bouton « Coller résultat » termine son traitement.</div>
+        <div id="formatZone5" class="wysiwyg" contenteditable="true"></div>
+    </div>
+
         </div>
     </div>
 
@@ -713,7 +727,7 @@
     <!-- FENÊTRE 3 : Éditeur de code HTML -->
     <div class="section" id="section1">
         <div class="toolbar" id="tb1">
-            <h2>7. Source HTML (Éditable)</h2>
+            <h2>8. Source HTML (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface le code HTML ainsi que l'aperçu visuel et l'aperçu monochrome qui en dépendent." onclick="clearSourceHTML()">Vider</button>
                 <button class="btn-paste" data-tooltip="Colle le code HTML du presse-papier ici et met à jour automatiquement les deux aperçus ci-dessous." onclick="pasteToSourceHTML()">Coller</button>
@@ -728,7 +742,7 @@
     <!-- FENÊTRE 4 : Aperçu visuel éditable (WYSIWYG) -->
     <div class="section" id="section2">
         <div class="toolbar" id="tb2">
-            <h2>8. Aperçu Visuel (Éditable)</h2>
+            <h2>9. Aperçu Visuel (Éditable)</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface l'aperçu visuel ainsi que le code source et l'aperçu monochrome qui lui sont liés." onclick="clearVisualHTML()">Vider</button>
                 <button class="btn-paste" data-tooltip="Colle du texte ou du HTML directement ici, sans toucher à la zone Source HTML au-dessus." onclick="pasteToVisualHTML()">Coller</button>
@@ -744,7 +758,7 @@
     <!-- FENÊTRE 5 : Aperçu Monochrome -->
     <div class="section" id="section3">
         <div class="toolbar" id="tb3">
-            <h2>9. Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
+            <h2>10. Aperçu Monochrome (Texte coloré entre doubles crochets)</h2>
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface l'aperçu monochrome ainsi que le code source et l'aperçu visuel qui lui sont liés." onclick="clearProcessedHTML()">Vider</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('section3')">Plein écran</button>
@@ -761,7 +775,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V37";
+        const VERSION = "V38";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -780,6 +794,7 @@
         const formatZone2 = document.getElementById('formatZone2');
         const formatZone3 = document.getElementById('formatZone3');
         const formatZone4 = document.getElementById('formatZone4');
+        const formatZone5 = document.getElementById('formatZone5');
 
         let lastPromptText = '';
         let lastFormatZone1Text = '';
@@ -804,7 +819,8 @@
                 formatSelectedValue: '',
                 formatZone2: '',
                 formatZone3: '',
-                formatZone4: ''
+                formatZone4: '',
+                formatZone5: ''
             };
         }
 
@@ -1045,6 +1061,7 @@
             formatZone2.value = appData.formatZone2 || '';
             formatZone3.value = appData.formatZone3 || '';
             formatZone4.innerHTML = (appData.formatZone4 !== undefined && appData.formatZone4 !== null) ? appData.formatZone4 : formatZone3.value;
+            formatZone5.innerHTML = appData.formatZone5 || '';
         }
 
         // -------------------------------------------------------------
@@ -1254,14 +1271,22 @@
             setTimeout(() => btn.classList.remove('btn-flash'), 2000);
         }
 
+        // En-tête fixe injectée dans la zone 7 à chaque exécution complète du
+        // traitement "Coller résultat" (collage → aération/hyperliens →
+        // copie du rendu).
+        const FIXED_HEADER_HTML = '<h2 dir="ltr" style="line-height:1.4000000000000001;margin-top:0pt;margin-bottom:0pt;"><span style="font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;">Memo A2</span></h2><h2 dir="ltr" style="line-height:1.4000000000000001;margin-top:15pt;margin-bottom:0pt;"><span style="font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;">Conversation</span></h2>';
+
         // Enchaîne : collage dans la zone 4 (Texte), puis "Aérer + Hyperliens"
-        // (zones 5-6), puis copie automatique du rendu de la zone 6 dans le
-        // presse-papier — en signalant visuellement le bouton "Copier le
-        // texte rendu (Zone 6)".
+        // (zones 5-6), injection de l'en-tête fixe en zone 7, puis copie
+        // automatique du rendu de la zone 6 dans le presse-papier — en
+        // signalant visuellement le bouton "Copier le texte rendu (Zone 6)".
         async function pasteAndCopyRendered() {
             const pasted = await pasteToFormatZone2();
             if (!pasted) return;
             aererSectionsFormat();
+            formatZone5.innerHTML = FIXED_HEADER_HTML;
+            appData.formatZone5 = FIXED_HEADER_HTML;
+            scheduleSync();
             flashCopyZone6Button();
             copyFormatZone4Rich();
         }
@@ -1454,6 +1479,17 @@
 
         function copyFormatZone4Rich() {
             copyRichFromElement(formatZone4);
+        }
+
+        function clearFormatZone5() {
+            formatZone5.innerHTML = '';
+            appData.formatZone5 = '';
+            scheduleSync();
+            showToast("Contenu vidé !");
+        }
+
+        function copyFormatZone5Rich() {
+            copyRichFromElement(formatZone5);
         }
 
         // -------------------------------------------------------------
@@ -1757,7 +1793,7 @@
             }
         });
 
-        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3', 'sectionFormat1', 'sectionFormat2', 'sectionFormat3', 'sectionFormat4'].forEach(secId => {
+        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3', 'sectionFormat1', 'sectionFormat2', 'sectionFormat3', 'sectionFormat4', 'sectionFormat5'].forEach(secId => {
             const section = document.getElementById(secId);
             if (!section) return;
             const toolbar = section.querySelector('.toolbar');
