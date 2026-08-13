@@ -713,7 +713,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V18";
+        const VERSION = "V19";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1215,7 +1215,16 @@
             lines.forEach((rawLine) => {
                 let trimmed = rawLine.trim();
                 if (trimmed.length === 0) return;
-                if (trimmed.startsWith('*')) trimmed = trimmed.slice(1).trim(); // supprime seulement l'étoile
+                // Supprime les marqueurs Markdown : "**" en début (gras) prime sur "*" seul,
+                // et "**" en fin de ligne.
+                if (trimmed.startsWith('**')) {
+                    trimmed = trimmed.slice(2).trim();
+                } else if (trimmed.startsWith('*')) {
+                    trimmed = trimmed.slice(1).trim();
+                }
+                if (trimmed.endsWith('**')) {
+                    trimmed = trimmed.slice(0, -2).trim();
+                }
                 if (trimmed.length === 0) return;
 
                 if (!trimmed.includes(':') && !firstNonEmpty) {
