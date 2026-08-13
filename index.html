@@ -654,6 +654,9 @@
         </div>
     </div>
 
+    <!-- BOUTON COPIE RAPIDE DU CONTENU DE LA FENÊTRE 6 (hors zone Mise en forme) -->
+    <button class="btn-chatgpt" data-tooltip="Copie le contenu actuel de la fenêtre 6 (Aperçu Rendu) dans le presse-papier, avec sa mise en forme (orange, gras, etc.) pour Word/Mail." onclick="copyFormatZone4Rich()">📋 Copier le texte rendu (Zone 6)</button>
+
     <!-- ZONE REPLIABLE APRÈS LE BOUTON ENVOYER VERS CHATGPT -->
     <div class="collapsible-zone">
         <div class="zone-title-bar" onclick="toggleZone('zoneAfter')">
@@ -713,7 +716,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V21";
+        const VERSION = "V22";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
