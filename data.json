@@ -24,8 +24,8 @@
     "Test": "Test"
   },
   "formatSelectedValue": "Demande d’explication simple",
-  "formatZone2": "Iiio",
-  "formatZone3": "",
-  "formatZone4": "",
-  "formatZone5": ""
+  "formatZone2": "Vocabulaire général",
+  "formatZone3": "<span style=\"font-weight:bold; font-size:1.25em; display:inline-block; margin-top:5px;\">Vocabulaire général</span><br>",
+  "formatZone4": "<span style=\"font-weight:bold; font-size:1.25em; display:inline-block; margin-top:5px;\">Vocabulaire général</span><br>",
+  "formatZone5": "<h2 dir=\"ltr\" style=\"line-height:1.4000000000000001;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;\">Memo A2</span></h2><h2 dir=\"ltr\" style=\"line-height:1.4000000000000001;margin-top:15pt;margin-bottom:0pt;\"><span style=\"font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;\">Conversation</span></h2>"
 }
