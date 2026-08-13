@@ -644,7 +644,7 @@
     <div class="workflow-group">
 
     <!-- BOUTON COLLAGE RAPIDE DANS LA FENÊTRE 2 (hors zone Préparation de la requête) -->
-    <button class="btn-paste btn-full-width" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis déclenche « Envoyer vers ChatGPT »." onclick="pasteCleanAndSend()">Coller, nettoyer et envoyer vers ChatGPT</button>
+    <button class="btn-paste btn-full-width" id="btnPasteCleanSend" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis déclenche « Envoyer vers ChatGPT »." onclick="pasteCleanAndSend()">Coller, nettoyer et envoyer vers ChatGPT</button>
 
     <!-- ZONE REPLIABLE AVANT LE BOUTON ENVOYER VERS CHATGPT -->
     <div class="collapsible-zone">
@@ -813,7 +813,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V44";
+        const VERSION = "V45";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1760,11 +1760,31 @@
             if (btn) btn.classList.remove('btn-highlight-green');
         }
 
-        // Toute autre action significative (clic sur un autre bouton, en
-        // particulier "Coller résultat" lui-même) éteint la mise en évidence.
+        // Fait passer le bouton "Coller, nettoyer et envoyer vers ChatGPT"
+        // en vert pur très lumineux (mis en évidence au démarrage de
+        // l'application).
+        function highlightPasteCleanSendButton() {
+            const btn = document.getElementById('btnPasteCleanSend');
+            if (btn) btn.classList.add('btn-highlight-green');
+        }
+
+        // Ramène le bouton "Coller, nettoyer et envoyer vers ChatGPT" à sa
+        // couleur normale.
+        function clearPasteCleanSendHighlight() {
+            const btn = document.getElementById('btnPasteCleanSend');
+            if (btn) btn.classList.remove('btn-highlight-green');
+        }
+
+        // Toute action significative (clic sur un bouton) éteint les mises
+        // en évidence en cours — y compris un clic sur le bouton mis en
+        // évidence lui-même. Exception : cliquer sur "Envoyer vers ChatGPT"
+        // n'éteint pas la mise en évidence de "Coller résultat" qu'il vient
+        // justement d'allumer.
         document.addEventListener('click', (e) => {
             const clickedButton = e.target.closest('button');
-            if (!clickedButton || clickedButton.id === 'btnSendChatGPT') return;
+            if (!clickedButton) return;
+            clearPasteCleanSendHighlight();
+            if (clickedButton.id === 'btnSendChatGPT') return;
             clearPasteResultHighlight();
         });
 
@@ -2166,6 +2186,7 @@
         fillSettingsFields();
         applyAppDataToUI(); // affichage immédiat avec les valeurs par défaut / cache local
         loadFromGitHub();   // puis remplacement par les données GitHub si configuré
+        highlightPasteCleanSendButton(); // mise en évidence au lancement de l'application
         {
             const cfgAtStart = getGhConfig();
             if (!ghConfigComplete(cfgAtStart)) {
