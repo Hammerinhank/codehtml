@@ -122,6 +122,7 @@
             padding: 8px 14px;
             border-radius: 6px;
             cursor: pointer;
+            font-family: inherit;
             font-size: 13px;
             font-weight: 500;
             transition: background-color 0.2s, transform 0.1s;
@@ -177,18 +178,16 @@
 
         /* Style spécifique pour le bouton d'envoi vers ChatGPT */
         .btn-chatgpt {
-            background-color: #10a37f;
+            background-color: #38a169;
             color: white;
             padding: 12px 20px;
-            font-size: 15px;
-            font-weight: 600;
             border-radius: 8px;
             align-self: flex-start;
-            box-shadow: 0 2px 6px rgba(16, 163, 127, 0.3);
+            box-shadow: 0 2px 6px rgba(56, 161, 105, 0.3);
         }
 
         .btn-chatgpt:hover {
-            background-color: #0e8e6d;
+            background-color: #2f855a;
         }
 
         button:active {
@@ -631,7 +630,7 @@
     <!-- BOUTON D'ENVOI VERS CHATGPT + BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
     <div class="action-row">
         <button class="btn-chatgpt btn-flex" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
-        <button class="btn-paste btn-flex" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), remplace le contenu existant." onclick="pasteToFormatZone2()">Coller</button>
+        <button class="btn-paste btn-flex" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), remplace le contenu existant." onclick="pasteToFormatZone2()">Coller résultat</button>
     </div>
 
     <!-- ZONE REPLIABLE : MISE EN FORME -->
@@ -754,7 +753,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V28";
+        const VERSION = "V31";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
