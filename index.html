@@ -760,7 +760,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V32";
+        const VERSION = "V33";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1494,10 +1494,30 @@
             showToast("Contexte vidé !");
         }
 
+        // Convertit un texte contenant des balises HTML (parfois renvoyées par
+        // le presse-papier iOS après une copie "riche") en texte brut, afin
+        // que la zone Contexte ne reçoive jamais de code HTML par erreur.
+        function sanitizeToPlainText(str) {
+            if (!/<[a-z][\s\S]*>/i.test(str)) return str; // pas de balises détectées, on laisse tel quel
+            return str
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, '\n')
+                .replace(/<[^>]+>/g, '')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        }
+
         async function pasteToContext() {
             try {
-                const text = await navigator.clipboard.readText();
+                let text = await navigator.clipboard.readText();
                 if (text !== undefined) {
+                    text = sanitizeToPlainText(text);
                     contextText.value = text;
                     appData.context = text;
                     scheduleSync();
