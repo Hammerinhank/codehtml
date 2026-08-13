@@ -569,6 +569,9 @@
         </div>
     </div>
 
+    <!-- BOUTON COLLAGE RAPIDE DANS LA FENÊTRE 2 (hors zone Préparation de la requête) -->
+    <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), remplace le contenu existant." onclick="pasteToContext()">📋 Coller dans le Contexte (Zone 2)</button>
+
     <!-- ZONE REPLIABLE AVANT LE BOUTON ENVOYER VERS CHATGPT -->
     <div class="collapsible-zone">
         <div class="zone-title-bar" onclick="toggleZone('zoneBefore')">
@@ -716,7 +719,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V22";
+        const VERSION = "V23";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
