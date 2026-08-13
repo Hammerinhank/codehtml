@@ -761,7 +761,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V36";
+        const VERSION = "V37";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1297,6 +1297,10 @@
                 }
                 if (trimmed.endsWith('**')) {
                     trimmed = trimmed.slice(0, -2).trim();
+                }
+                // Supprime les "###" (titre Markdown) en début de ligne, en conservant le reste.
+                if (trimmed.startsWith('###')) {
+                    trimmed = trimmed.slice(3).trim();
                 }
                 if (trimmed.length === 0) return;
 
