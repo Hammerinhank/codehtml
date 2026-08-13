@@ -638,7 +638,7 @@
     <!-- BOUTON D'ENVOI VERS CHATGPT + BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
     <div class="action-row">
         <button class="btn-chatgpt btn-flex" id="btnSendChatGPT" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
-        <button class="btn-paste btn-flex" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), puis copie automatiquement le rendu de la zone 6 dans le presse-papier." onclick="pasteAndCopyRendered()">Coller résultat</button>
+        <button class="btn-paste btn-flex" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 6 dans le presse-papier." onclick="pasteAndCopyRendered()">Coller résultat</button>
     </div>
 
     <!-- ZONE REPLIABLE : MISE EN FORME -->
@@ -761,7 +761,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V35";
+        const VERSION = "V36";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1254,12 +1254,14 @@
             setTimeout(() => btn.classList.remove('btn-flash'), 2000);
         }
 
-        // Enchaîne : collage dans la zone 4 (Texte), puis copie automatique
-        // du rendu de la zone 6 dans le presse-papier — en signalant
-        // visuellement le bouton "Copier le texte rendu (Zone 6)".
+        // Enchaîne : collage dans la zone 4 (Texte), puis "Aérer + Hyperliens"
+        // (zones 5-6), puis copie automatique du rendu de la zone 6 dans le
+        // presse-papier — en signalant visuellement le bouton "Copier le
+        // texte rendu (Zone 6)".
         async function pasteAndCopyRendered() {
             const pasted = await pasteToFormatZone2();
             if (!pasted) return;
+            aererSectionsFormat();
             flashCopyZone6Button();
             copyFormatZone4Rich();
         }
