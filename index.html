@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Éditeur & Prévisualisation HTML avec ChatGPT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -248,6 +251,32 @@
             font-weight: normal !important;
             font-style: normal !important;
             text-decoration: none !important;
+        }
+
+        /* Fenêtre 7 (Memo A2 / Conversation) : police proche de celle du
+           site Google Sites de destination (Roboto), avec un rendu des
+           titres, sous-titres et liens de vocabulaire similaire à la
+           capture d'écran fournie. */
+        #formatZone5 {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #202124;
+        }
+
+        #formatZone5 h2 {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif !important;
+        }
+
+        #formatZone5 span[style*="font-weight:bold"],
+        #formatZone5 span[style*="font-weight: bold"] {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            font-weight: 700;
+        }
+
+        #formatZone5 span[style*="rgb(255, 165, 0)"] {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            text-decoration: underline;
         }
 
         .toast {
@@ -775,7 +804,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V42";
+        const VERSION = "V43";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1275,8 +1304,8 @@
         // du traitement "Coller résultat" (collage → aération/hyperliens →
         // copie du rendu). Le contenu de la zone 6 est inséré après chacun
         // des deux titres.
-        const HEADER_MEMO_A2 = '<h2 dir="ltr" style="line-height:1.4000000000000001;margin-top:0pt;margin-bottom:0pt;"><span style="font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;">Memo A2</span></h2>';
-        const HEADER_CONVERSATION = '<h2 dir="ltr" style="line-height:1.4000000000000001;margin-top:15pt;margin-bottom:0pt;"><span style="font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;">Conversation</span></h2>';
+        const HEADER_MEMO_A2 = '<h2 dir="ltr" style="line-height:1.4000000000000001;margin-top:0pt;margin-bottom:0pt;"><span style="font-size: 19pt; font-family: Roboto, sans-serif; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;">Memo A2</span></h2>';
+        const HEADER_CONVERSATION = '<h2 dir="ltr" style="line-height:1.4000000000000001;margin-top:15pt;margin-bottom:0pt;"><span style="font-size: 19pt; font-family: Roboto, sans-serif; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;">Conversation</span></h2>';
 
         // Enchaîne : collage dans la zone 4 (Texte), puis "Aérer + Hyperliens"
         // (zones 5-6), construction de la zone 7 (contenu de la zone 6 après
