@@ -2,7 +2,8 @@
   "comboOptions": [
     "Un fichier HTML avec mots difficiles pour niveau A2",
     "Liste de mots difficiles pour un niveau A2",
-    "Extraire un liste de mots A2"
+    "Extraire un liste de mots A2",
+    "Essai"
   ],
   "promptsMap": {
     "": "",
@@ -10,7 +11,7 @@
     "Liste de mots difficiles pour un niveau A2": "Peux-tu me donner une liste de mots à partir de ce texte constituée de tous les mots difficile pour un étudiant niveau A2 en vietnamien ? Pour faire ton analyse, ne retient que les ligne qui sont exclusivement en vietnamien. Peux-tu produire un fichier HTML avec un hyperlien sur chaque partie vietnamienne (à gauche des \":\") un hyperlien vers chatGPT qui demande à chatGPT d'expliquer la signification du mot ou de l'expression en précisant en plus la signification de chacune des syllabes prises individuellement. Peux-tu regrouper ces mots par catégories thematiques. Mets les titres dans une police particulère : en gras : police plus grande, etc. Utilise du code HTML qui \"résiste\" lors des copier coller dans une page google site, que le formatage du texte ne soit pas perdu.",
     "Extraire un liste de mots A2": "Peux-tu me donner une liste de mots à partir de ce texte constituée de tous les mots difficile pour un étudiant niveau A2 en vietnamien ? Pour faire ton analyse, ne retient que les ligne qui sont exclusivement en vietnamien. Donne moi uniquement la liste classée par thématique avec ':' pour séparer les mots de leur traduction et jamais de \":\" dans les titre de rubriques thématiques."
   },
-  "selectedValue": "Extraire un liste de mots A2",
+  "selectedValue": "Essai",
   "context": "ở Pháp bây giờ là 3 giờ chiều.\nhộ chiếu\nHoa phượng nở từ tháng 5\nđến tận bây giờ\nngày 13/5 hằng năm\nlà ngày kỷ niệm giải phóng Hải Phòng\ncũng là ngày này ở hải Phòng tổ chức lễ hội HOA PHƯỢNG ĐỎ\nMÚA RÔID\nMÚA RỐI\nBÁC ĐÃ ĐƯỢC XEM MÚA RỐI CHƯA Ạ\nBác đã được xem múa rối chưa ạ.\nCây phượng được trồng ở trên vỉa hè\ncòn người con gái thì đứng ở dưới con đường.\ndưới lòng đường thì các phương tiện đi lại gồm : xe máy, ô tô ...\ntrên vỉa hè; chỉ có người đi bộ\nhoặc có thể xe máy , xe đạp họ dựng để trên viaar hè\nHồ Tây\nthức dậy lúc 7h sáng\ntầm cao điểm của Hà Nội\ngiờ cao điểm của Hà Nội\ncách\ndậy muốn\ndậy muộn\ncó nghĩa là ko dậy sớm\nngày dài, đêm ngắn\nđó là nói về mùa hè\nmưa đá\nhạt mưa to màu trắng\nNhững người sở hữu vườn nho ở Pháp lo sợ mưa đá.\nảnh này được chụp từ trên cao",
   "htmlSource": "<h2 dir=\"ltr\" style=\"line-height:1.4000000000000001;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;\">Memo A2</span></h2><h2 dir=\"ltr\" style=\"line-height:1.4000000000000001;margin-top:15pt;margin-bottom:0pt;\"><span style=\"font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;\">Conversation</span></h2>",
   "htmlVisual": "<h2 dir=\"ltr\" style=\"line-height:1.4000000000000001;margin-top:0pt;margin-bottom:0pt;\"><span style=\"font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;\">Memo A2</span></h2><h2 dir=\"ltr\" style=\"line-height:1.4000000000000001;margin-top:15pt;margin-bottom:0pt;\"><span style=\"font-size: 19pt; font-family: Lato; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;\">Conversation</span></h2>",
