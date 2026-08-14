@@ -810,10 +810,24 @@
         </div>
     </div>
 
+    <!-- FENÊTRE LOG : trace des opérations complexes exécutées par l'application -->
+    <div class="section" id="sectionLog">
+        <div class="toolbar" id="tbLog">
+            <h2>Log</h2>
+            <div class="button-group">
+                <button class="btn-clear" data-tooltip="Efface le journal des opérations." onclick="clearLog()">Vider</button>
+                <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionLog')">Plein écran</button>
+                <button data-tooltip="Copie le journal dans le presse-papier." onclick="copyLogText()">Copier</button>
+            </div>
+        </div>
+        <div class="zone-desc">Journal numéroté des opérations complexes exécutées par l'application : d'où provient l'information traitée, ce qui a été fait, et où le résultat est envoyé ou stocké.</div>
+        <textarea id="logText" readonly placeholder="Le journal des opérations apparaîtra ici au fil de l'utilisation de l'application..."></textarea>
+    </div>
+
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V45";
+        const VERSION = "V47";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -824,6 +838,7 @@
         const htmlProcessed = document.getElementById('htmlProcessed');
         const renderHost = document.getElementById('renderHost');
         const toast = document.getElementById('toast');
+        const logText = document.getElementById('logText');
         const syncStatusEl = document.getElementById('syncStatus');
         const settingsBody = document.getElementById('settingsBody');
 
@@ -1042,6 +1057,7 @@
                     appData = Object.assign(defaultAppData(), result.data);
                     lastKnownSha = result.sha;
                     setSyncStatus('✓ Chargé depuis GitHub', 'ok');
+                    addLog(`Chargement : dépôt GitHub ${cfg.owner}/${cfg.repo} (${cfg.path}) → toutes les zones de l'application.`);
                 } else {
                     appData = defaultAppData();
                     lastKnownSha = null;
@@ -1053,6 +1069,7 @@
             } catch (err) {
                 console.error(err);
                 setSyncStatus('✗ Échec chargement (copie locale utilisée) : ' + err.message, 'error');
+                addLog(`Échec de chargement depuis GitHub (${cfg.owner}/${cfg.repo}) → utilisation de la copie locale de l'appareil.`);
                 loadLocalCacheIntoApp();
             }
         }
@@ -1075,9 +1092,11 @@
                 const newSha = await ghPutFile(appData, current.sha);
                 lastKnownSha = newSha;
                 setSyncStatus('✓ Synchronisé ' + new Date().toLocaleTimeString('fr-FR'), 'ok');
+                addLog(`Synchronisation : toutes les zones de l'application → dépôt GitHub ${cfg.owner}/${cfg.repo} (${cfg.path}).`);
             } catch (err) {
                 console.error(err);
                 setSyncStatus('✗ Échec sync : ' + err.message, 'error');
+                addLog(`Échec de synchronisation vers GitHub (${cfg.owner}/${cfg.repo}) : ${err.message}.`);
             }
         }
 
@@ -1290,6 +1309,7 @@
                     appData.formatZone2 = text;
                     scheduleSync();
                     showToast("Texte collé !");
+                    addLog("Collage : presse-papier → zone 4 (Texte).");
                     return true;
                 }
                 return false;
@@ -1332,9 +1352,11 @@
             formatZone5.innerHTML = zone7Content;
             appData.formatZone5 = zone7Content;
             scheduleSync();
+            addLog('Construction : en-tête « Memo A2 » + zone 6 (Aperçu Rendu), puis en-tête « Conversation » + zone 2 (Contexte) → zone 7.');
 
             flashCopyZone7Button();
             copyFormatZone5Rich();
+            addLog("Copie : zone 7 → presse-papier.");
         }
 
         // Repris du bouton "↕️ Aérer Sections" du Transformateur Couleur :
@@ -1395,6 +1417,7 @@
             formatZone4.innerHTML = newHTML;
             appData.formatZone3 = newHTML;
             appData.formatZone4 = newHTML;
+            addLog("Aération : zone 4 (Texte) → zones 5 (Résultat) et 6 (Aperçu Rendu) — sections mises en gras, expressions avant « : » colorées en orange.");
 
             if (newHTML.trim()) {
                 // Enchaîne automatiquement le traitement "Ajouter Hyperliens"
@@ -1461,6 +1484,7 @@
             appData.formatZone4 = newHTML;
             scheduleSync();
             showToast(`${count} hyperlien(s) ajouté(s) vers ChatGPT !`);
+            addLog(`Hyperliens : zone 5 (Résultat) + modèle de la zone 3 → ${count} expression(s) transformée(s) en lien ChatGPT dans les zones 5 et 6.`);
         }
 
         // Zone 5 (code HTML) <-> Zone 6 (aperçu rendu) : synchronisation
@@ -1643,6 +1667,7 @@
                     appData.context = text;
                     scheduleSync();
                     showToast("Contexte collé !");
+                    addLog("Collage : presse-papier → zone 2 (Contexte), avec nettoyage automatique des balises HTML éventuelles.");
                     return true;
                 }
                 return false;
@@ -1720,6 +1745,7 @@
             appData.context = contextText.value;
             scheduleSync();
             showToast(`Conversation nettoyée ! (${lines.length - cleanedLines.length} ligne(s) retirée(s))`);
+            addLog(`Nettoyage : zone 2 (Contexte) → zone 2 mise à jour (${lines.length - cleanedLines.length} ligne(s) vide(s)/horodatages/mentions retirée(s) sur ${lines.length}).`);
         }
 
         // -------------------------------------------------------------
@@ -1743,6 +1769,7 @@
             const encodedQuery = encodeURIComponent(combinedQuery);
             const targetUrl = `https://chatgpt.com/?q=${encodedQuery}`;
             window.open(targetUrl, '_blank');
+            addLog("Envoi ChatGPT : zone 1 (Instructions) + zone 2 (Contexte) → nouvel onglet chatgpt.com (requête pré-remplie).");
 
             highlightPasteResultButton();
         }
@@ -1882,7 +1909,7 @@
             }
         });
 
-        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3', 'sectionFormat1', 'sectionFormat2', 'sectionFormat3', 'sectionFormat4', 'sectionFormat5'].forEach(secId => {
+        ['sectionPrompt', 'sectionContext', 'section1', 'section2', 'section3', 'sectionFormat1', 'sectionFormat2', 'sectionFormat3', 'sectionFormat4', 'sectionFormat5', 'sectionLog'].forEach(secId => {
             const section = document.getElementById(secId);
             if (!section) return;
             const toolbar = section.querySelector('.toolbar');
@@ -1986,6 +2013,75 @@
             toast.textContent = message;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // -------------------------------------------------------------
+        // JOURNAL DES OPÉRATIONS (fenêtre "Log")
+        // Stocké UNIQUEMENT dans le stockage local de l'appareil (jamais sur
+        // GitHub). Remis à zéro dès que la date du jour change : le journal
+        // ne conserve donc jamais plus de 24 h de contenu.
+        // -------------------------------------------------------------
+
+        const LS_LOG_DATE = 'app_log_date';
+        const LS_LOG_CONTENT = 'app_log_content';
+        const LS_LOG_COUNTER = 'app_log_counter';
+
+        let logCounter = 0;
+
+        function todayDateString() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        // À appeler au lancement de l'application : restaure le journal du
+        // jour depuis le stockage local, ou le vide si la date a changé
+        // (ou au tout premier lancement).
+        function initLog() {
+            const storedDate = localStorage.getItem(LS_LOG_DATE);
+            const today = todayDateString();
+            if (storedDate === today) {
+                logText.value = localStorage.getItem(LS_LOG_CONTENT) || '';
+                logCounter = parseInt(localStorage.getItem(LS_LOG_COUNTER) || '0', 10) || 0;
+            } else {
+                logText.value = '';
+                logCounter = 0;
+                localStorage.setItem(LS_LOG_DATE, today);
+                localStorage.setItem(LS_LOG_CONTENT, '');
+                localStorage.setItem(LS_LOG_COUNTER, '0');
+            }
+        }
+
+        function saveLogToLocalStorage() {
+            localStorage.setItem(LS_LOG_DATE, todayDateString());
+            localStorage.setItem(LS_LOG_CONTENT, logText.value);
+            localStorage.setItem(LS_LOG_COUNTER, String(logCounter));
+        }
+
+        // Ajoute une ligne numérotée au journal, décrivant une étape d'une
+        // opération complexe : d'où vient l'information traitée, ce qui a
+        // été fait, et où le résultat est envoyé ou stocké.
+        function addLog(message) {
+            logCounter++;
+            const line = `${logCounter}. ${message}`;
+            logText.value = logText.value ? (logText.value + '\n' + line) : line;
+            logText.scrollTop = logText.scrollHeight;
+            saveLogToLocalStorage();
+        }
+
+        function clearLog() {
+            logText.value = '';
+            logCounter = 0;
+            saveLogToLocalStorage();
+            showToast("Journal vidé !");
+        }
+
+        async function copyLogText() {
+            try {
+                await navigator.clipboard.writeText(logText.value);
+                showToast("Journal copié !");
+            } catch (err) {
+                console.error('Erreur de copie :', err);
+            }
         }
 
         function clearSourceHTML() {
@@ -2183,6 +2279,7 @@
         // DÉMARRAGE
         // -------------------------------------------------------------
 
+        initLog(); // restaure ou remet à zéro le journal local (max 24 h) avant toute opération
         fillSettingsFields();
         applyAppDataToUI(); // affichage immédiat avec les valeurs par défaut / cache local
         loadFromGitHub();   // puis remplacement par les données GitHub si configuré
