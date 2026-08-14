@@ -589,6 +589,7 @@
             </select>
             <input type="text" id="newItemInput" placeholder="Intitulé à ajouter dans la liste..." />
             <button class="btn-add-combo" data-tooltip="Ajoute le texte saisi comme nouvel élément de la liste déroulante, le sélectionne et prépare des instructions vierges pour lui." onclick="addComboItem()">Ajouter à la liste</button>
+            <button class="btn-toggle-fs" data-tooltip="Renomme l'élément actuellement sélectionné dans la liste avec le texte saisi ci-dessus, en conservant ses instructions associées." onclick="renameComboItem()">Renommer</button>
         </div>
     </div>
 
@@ -618,6 +619,7 @@
             </select>
             <input type="text" id="newFormatItemInput" placeholder="Intitulé à ajouter dans la liste..." />
             <button class="btn-add-combo" data-tooltip="Ajoute le texte saisi comme nouvel élément de la liste déroulante, le sélectionne et prépare un texte vierge pour lui." onclick="addFormatComboItem()">Ajouter à la liste</button>
+            <button class="btn-toggle-fs" data-tooltip="Renomme l'élément actuellement sélectionné dans la liste avec le texte saisi ci-dessus, en conservant son texte associé." onclick="renameFormatComboItem()">Renommer</button>
         </div>
     </div>
 
@@ -696,6 +698,7 @@
                 <button class="btn-paste" data-tooltip="Colle le contenu du presse-papier dans cette zone (remplace le contenu existant)." onclick="pasteToFormatZone2()">Coller</button>
                 <button class="btn-cleanup" data-tooltip="Reprend le texte de cette zone, sépare les sections (lignes sans « : ») en ajoutant un saut de ligne avant chacune, garde les lignes avec « : » regroupées, place le résultat dans la zone 5, puis ajoute automatiquement les hyperliens ChatGPT sur les expressions oranges (zone 5 et 6)." onclick="aererSectionsFormat()">↕️ Aérer + Hyperliens → Zones 5-6</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat2')">Plein écran</button>
+                <button data-tooltip="Copie le contenu de la zone Texte dans le presse-papier." onclick="copyFormatZone2Text()">Copier</button>
             </div>
         </div>
         <div class="zone-desc">Zone de texte libre, sauvegardée sur GitHub comme le reste de l'application.</div>
@@ -837,7 +840,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V48";
+        const VERSION = "V51";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1183,6 +1186,50 @@
             }
         });
 
+        // Renomme l'élément actuellement sélectionné de la combo box (zone 1)
+        // avec le texte saisi, en conservant ses instructions associées.
+        function renameComboItem() {
+            const currentKey = customSelect.value;
+            if (!currentKey) {
+                showToast("Aucun élément sélectionné !");
+                return;
+            }
+
+            const input = document.getElementById('newItemInput');
+            const newName = input.value.trim();
+
+            if (newName === '') {
+                showToast("Veuillez saisir le nouveau nom !");
+                return;
+            }
+            if (newName === currentKey) {
+                showToast("Le nom est identique !");
+                return;
+            }
+            if (appData.comboOptions.includes(newName)) {
+                showToast("Ce nom existe déjà dans la liste !");
+                return;
+            }
+
+            const idx = appData.comboOptions.indexOf(currentKey);
+            if (idx !== -1) {
+                appData.comboOptions[idx] = newName;
+            }
+            if (Object.prototype.hasOwnProperty.call(appData.promptsMap, currentKey)) {
+                appData.promptsMap[newName] = appData.promptsMap[currentKey];
+                delete appData.promptsMap[currentKey];
+            }
+            appData.selectedValue = newName;
+
+            renderSelectOptions();
+            updatePromptForSelection();
+            scheduleSync();
+            addLog(`Renommage : entrée « ${currentKey} » → « ${newName} » (combo zone 1, instructions conservées).`);
+
+            input.value = '';
+            showToast("Élément renommé !");
+        }
+
         customSelect.addEventListener('change', () => {
             appData.selectedValue = customSelect.value;
             updatePromptForSelection();
@@ -1240,6 +1287,50 @@
                 addFormatComboItem();
             }
         });
+
+        // Renomme l'élément actuellement sélectionné de la combo box (zone 3)
+        // avec le texte saisi, en conservant son texte de modèle associé.
+        function renameFormatComboItem() {
+            const currentKey = formatSelect.value;
+            if (!currentKey) {
+                showToast("Aucun élément sélectionné !");
+                return;
+            }
+
+            const input = document.getElementById('newFormatItemInput');
+            const newName = input.value.trim();
+
+            if (newName === '') {
+                showToast("Veuillez saisir le nouveau nom !");
+                return;
+            }
+            if (newName === currentKey) {
+                showToast("Le nom est identique !");
+                return;
+            }
+            if (appData.formatComboOptions.includes(newName)) {
+                showToast("Ce nom existe déjà dans la liste !");
+                return;
+            }
+
+            const idx = appData.formatComboOptions.indexOf(currentKey);
+            if (idx !== -1) {
+                appData.formatComboOptions[idx] = newName;
+            }
+            if (Object.prototype.hasOwnProperty.call(appData.formatPromptsMap, currentKey)) {
+                appData.formatPromptsMap[newName] = appData.formatPromptsMap[currentKey];
+                delete appData.formatPromptsMap[currentKey];
+            }
+            appData.formatSelectedValue = newName;
+
+            renderFormatSelectOptions();
+            updateFormatZone1ForSelection();
+            scheduleSync();
+            addLog(`Renommage : entrée « ${currentKey} » → « ${newName} » (combo zone 3, modèle conservé).`);
+
+            input.value = '';
+            showToast("Élément renommé !");
+        }
 
         formatSelect.addEventListener('change', () => {
             appData.formatSelectedValue = formatSelect.value;
@@ -1311,6 +1402,15 @@
             showToast("Contenu vidé !");
         }
 
+        async function copyFormatZone2Text() {
+            try {
+                await navigator.clipboard.writeText(formatZone2.value);
+                showToast("Contenu du Texte copié !");
+            } catch (err) {
+                console.error('Erreur de copie :', err);
+            }
+        }
+
         async function pasteToFormatZone2() {
             try {
                 const text = await navigator.clipboard.readText();
@@ -1367,6 +1467,14 @@
             flashCopyZone7Button();
             copyFormatZone5Rich();
             addLog("Copie : zone 7 → presse-papier.");
+
+            // 15 s après la fin du traitement "Coller résultat", met en
+            // évidence le bouton "Coller, nettoyer et envoyer vers ChatGPT"
+            // pour inviter à poursuivre le flux.
+            setTimeout(() => {
+                highlightPasteCleanSendButton();
+                addLog('Rappel (15 s après « Coller résultat ») : mise en évidence du bouton "Coller, nettoyer et envoyer vers ChatGPT".');
+            }, 15000);
         }
 
         // Repris du bouton "↕️ Aérer Sections" du Transformateur Couleur :
