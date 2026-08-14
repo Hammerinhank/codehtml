@@ -810,7 +810,14 @@
         </div>
     </div>
 
-    <!-- FENÊTRE LOG : trace des opérations complexes exécutées par l'application -->
+    <!-- ZONE REPLIABLE : LOG (trace des opérations complexes exécutées par l'application) -->
+    <div class="collapsible-zone">
+        <div class="zone-title-bar" onclick="toggleZone('zoneLog')">
+            <h2>🪵 Log</h2>
+            <span class="zone-arrow" id="zoneLogArrow">▸</span>
+        </div>
+        <div class="zone-content closed" id="zoneLogContent">
+
     <div class="section" id="sectionLog">
         <div class="toolbar" id="tbLog">
             <h2>Log</h2>
@@ -824,10 +831,13 @@
         <textarea id="logText" readonly placeholder="Le journal des opérations apparaîtra ici au fil de l'utilisation de l'application..."></textarea>
     </div>
 
+        </div>
+    </div>
+
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V47";
+        const VERSION = "V48";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
