@@ -639,11 +639,37 @@
 
     </div>
 
+    <div class="param-group">
+
+    <!-- COMBO BOX DE PARAMÉTRAGE : liste des valeurs du premier champ (avant le bouton "Coller, nettoyer et envoyer") -->
+    <div class="combo-section">
+        <div class="combo-container">
+            <select id="headerTypeSelect">
+                <option value="">-- Sélectionnez un élément --</option>
+            </select>
+            <input type="text" id="newHeaderTypeInput" placeholder="Intitulé à ajouter dans la liste..." />
+            <button class="btn-add-combo" data-tooltip="Ajoute le texte saisi comme nouvel élément de la liste." onclick="addHeaderTypeItem()">Ajouter à la liste</button>
+            <button class="btn-toggle-fs" data-tooltip="Renomme l'élément actuellement sélectionné avec le texte saisi ci-dessus." onclick="renameHeaderTypeItem()">Renommer</button>
+            <button class="btn-clear" data-tooltip="Supprime définitivement l'élément actuellement sélectionné de la liste (confirmation demandée)." onclick="deleteHeaderTypeItem()">Supprimer</button>
+        </div>
+        <div class="zone-desc" style="border-bottom:none;">Liste des valeurs disponibles pour le premier champ affiché avant le bouton « Coller, nettoyer et envoyer vers ChatGPT ». Sauvegardée sur GitHub comme le reste de l'application.</div>
+    </div>
+
+    </div>
+
         </div>
     </div>
 
     <!-- ZONE ENCADRÉE : du bouton "Coller dans le Contexte" au bouton "Copier le texte rendu" -->
     <div class="workflow-group">
+
+    <!-- CHAMPS D'EN-TÊTE (type + date) insérés en tête du texte copié par "Coller résultat" -->
+    <div class="combo-section">
+        <div class="combo-container" style="margin-bottom: 0;">
+            <select id="headerTypeField" style="width: 8ch; min-width: 8ch; flex: 0 0 auto;" data-tooltip="Valeur insérée en premier sur la ligne d'en-tête (liste définie dans « Paramétrage des requêtes à ChatGPT »)."></select>
+            <input type="text" id="headerDateField" style="flex: 1;" data-tooltip="Valeur insérée après « : » sur la ligne d'en-tête. Initialisée avec la date du jour, modifiable.">
+        </div>
+    </div>
 
     <!-- BOUTON COLLAGE RAPIDE DANS LA FENÊTRE 2 (hors zone Préparation de la requête) -->
     <button class="btn-paste btn-full-width" id="btnPasteCleanSend" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis déclenche « Envoyer vers ChatGPT »." onclick="pasteCleanAndSend()">Coller, nettoyer et envoyer vers ChatGPT</button>
@@ -840,7 +866,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V54";
+        const VERSION = "V55";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -856,6 +882,9 @@
         const settingsBody = document.getElementById('settingsBody');
 
         const formatSelect = document.getElementById('formatSelect');
+        const headerTypeSelect = document.getElementById('headerTypeSelect');
+        const headerTypeField = document.getElementById('headerTypeField');
+        const headerDateField = document.getElementById('headerDateField');
         const formatZone1 = document.getElementById('formatZone1');
         const formatZone2 = document.getElementById('formatZone2');
         const formatZone3 = document.getElementById('formatZone3');
@@ -886,7 +915,9 @@
                 formatZone2: '',
                 formatZone3: '',
                 formatZone4: '',
-                formatZone5: ''
+                formatZone5: '',
+                headerTypeOptions: [],
+                headerTypeSelectedValue: ''
             };
         }
 
@@ -1132,6 +1163,8 @@
             formatZone3.value = appData.formatZone3 || '';
             formatZone4.innerHTML = (appData.formatZone4 !== undefined && appData.formatZone4 !== null) ? appData.formatZone4 : formatZone3.value;
             formatZone5.innerHTML = appData.formatZone5 || '';
+            if (!appData.headerTypeOptions) appData.headerTypeOptions = [];
+            renderHeaderTypeSelectOptions();
         }
 
         // -------------------------------------------------------------
@@ -1332,6 +1365,159 @@
             showToast("Élément renommé !");
         }
 
+        // -------------------------------------------------------------
+        // COMBO DE PARAMÉTRAGE (liste des valeurs du 1er champ d'en-tête)
+        // Persistée sur GitHub comme le reste de l'appData.
+        // -------------------------------------------------------------
+
+        function renderHeaderTypeSelectOptions() {
+            headerTypeSelect.innerHTML = '<option value="">-- Sélectionnez un élément --</option>';
+            appData.headerTypeOptions.forEach(opt => {
+                const optionEl = document.createElement('option');
+                optionEl.value = opt;
+                optionEl.textContent = opt;
+                headerTypeSelect.appendChild(optionEl);
+            });
+            headerTypeSelect.value = appData.headerTypeSelectedValue || '';
+            renderHeaderTypeFieldOptions();
+        }
+
+        function addHeaderTypeItem() {
+            const input = document.getElementById('newHeaderTypeInput');
+            const text = input.value.trim();
+
+            if (text === '') {
+                showToast("Veuillez saisir un intitulé !");
+                return;
+            }
+            if (!appData.headerTypeOptions.includes(text)) {
+                appData.headerTypeOptions.push(text);
+            }
+            appData.headerTypeSelectedValue = text;
+
+            renderHeaderTypeSelectOptions();
+            scheduleSync();
+            addLog(`Paramétrage : ajout de « ${text} » à la liste du 1er champ d'en-tête (GitHub).`);
+
+            input.value = '';
+            showToast("Élément ajouté à la liste !");
+        }
+
+        document.getElementById('newHeaderTypeInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addHeaderTypeItem();
+            }
+        });
+
+        function renameHeaderTypeItem() {
+            const currentKey = headerTypeSelect.value;
+            if (!currentKey) {
+                showToast("Aucun élément sélectionné !");
+                return;
+            }
+            const input = document.getElementById('newHeaderTypeInput');
+            const newName = input.value.trim();
+            if (newName === '') {
+                showToast("Veuillez saisir le nouveau nom !");
+                return;
+            }
+            if (newName === currentKey) {
+                showToast("Le nom est identique !");
+                return;
+            }
+            if (appData.headerTypeOptions.includes(newName)) {
+                showToast("Ce nom existe déjà dans la liste !");
+                return;
+            }
+
+            const idx = appData.headerTypeOptions.indexOf(currentKey);
+            if (idx !== -1) appData.headerTypeOptions[idx] = newName;
+            appData.headerTypeSelectedValue = newName;
+
+            renderHeaderTypeSelectOptions();
+            scheduleSync();
+            addLog(`Paramétrage : renommage « ${currentKey} » → « ${newName} » dans la liste du 1er champ d'en-tête (GitHub).`);
+
+            if (localStorage.getItem(LS_HEADER_TYPE_VALUE) === currentKey) {
+                localStorage.setItem(LS_HEADER_TYPE_VALUE, newName);
+            }
+
+            input.value = '';
+            showToast("Élément renommé !");
+        }
+
+        function deleteHeaderTypeItem() {
+            const currentKey = headerTypeSelect.value;
+            if (!currentKey) {
+                showToast("Aucun élément sélectionné !");
+                return;
+            }
+            const confirmDelete = confirm(`Voulez-vous vraiment supprimer « ${currentKey} » de la liste ?`);
+            if (!confirmDelete) return;
+
+            appData.headerTypeOptions = appData.headerTypeOptions.filter(o => o !== currentKey);
+            appData.headerTypeSelectedValue = '';
+
+            renderHeaderTypeSelectOptions();
+            scheduleSync();
+            addLog(`Paramétrage : suppression de « ${currentKey} » de la liste du 1er champ d'en-tête (GitHub).`);
+            showToast("Élément supprimé !");
+        }
+
+        headerTypeSelect.addEventListener('change', () => {
+            appData.headerTypeSelectedValue = headerTypeSelect.value;
+            scheduleSync();
+        });
+
+        // -------------------------------------------------------------
+        // CHAMPS D'EN-TÊTE (avant "Coller, nettoyer et envoyer vers ChatGPT")
+        // Valeurs persistées UNIQUEMENT dans le stockage local (jamais sur
+        // GitHub). Le 1er champ reproduit la liste ci-dessus ; le 2e est
+        // réinitialisé à la date du jour à chaque chargement de la page.
+        // -------------------------------------------------------------
+
+        const LS_HEADER_TYPE_VALUE = 'header_type_field_value';
+        const LS_HEADER_DATE_VALUE = 'header_date_field_value';
+
+        const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+        function formatDateFrench(date) {
+            return `${date.getDate()} ${MONTHS_FR[date.getMonth()]} ${date.getFullYear()}`;
+        }
+
+        // Reconstruit les options du champ 1 à partir de la liste de
+        // paramétrage, en restaurant la sélection sauvegardée localement.
+        function renderHeaderTypeFieldOptions() {
+            if (!headerTypeField) return;
+            const savedValue = localStorage.getItem(LS_HEADER_TYPE_VALUE) || '';
+            headerTypeField.innerHTML = '<option value=""></option>';
+            appData.headerTypeOptions.forEach(opt => {
+                const optionEl = document.createElement('option');
+                optionEl.value = opt;
+                optionEl.textContent = opt;
+                headerTypeField.appendChild(optionEl);
+            });
+            headerTypeField.value = appData.headerTypeOptions.includes(savedValue) ? savedValue : '';
+        }
+
+        // À appeler au démarrage : restaure le champ 1 depuis le stockage
+        // local, et réinitialise systématiquement le champ 2 à la date du
+        // jour (format "14 août 2026").
+        function initHeaderFields() {
+            renderHeaderTypeFieldOptions();
+            headerDateField.value = formatDateFrench(new Date());
+            localStorage.setItem(LS_HEADER_DATE_VALUE, headerDateField.value);
+        }
+
+        headerTypeField.addEventListener('change', () => {
+            localStorage.setItem(LS_HEADER_TYPE_VALUE, headerTypeField.value);
+        });
+
+        headerDateField.addEventListener('input', () => {
+            localStorage.setItem(LS_HEADER_DATE_VALUE, headerDateField.value);
+        });
+
         formatSelect.addEventListener('change', () => {
             appData.formatSelectedValue = formatSelect.value;
             updateFormatZone1ForSelection();
@@ -1458,11 +1644,12 @@
 
             const zone6Content = formatZone4.innerHTML;
             const zone2Content = escapeHtmlFormat(contextText.value).replace(/\r?\n/g, '<br>');
-            const zone7Content = HEADER_MEMO_A2 + zone6Content + HEADER_CONVERSATION + zone2Content;
+            const headerLine = `<div>${escapeHtmlFormat(headerTypeField.value)} : ${escapeHtmlFormat(headerDateField.value)}</div>`;
+            const zone7Content = headerLine + HEADER_MEMO_A2 + zone6Content + HEADER_CONVERSATION + zone2Content;
             formatZone5.innerHTML = zone7Content;
             appData.formatZone5 = zone7Content;
             scheduleSync();
-            addLog('Construction : en-tête « Memo A2 » + zone 6 (Aperçu Rendu), puis en-tête « Conversation » + zone 2 (Contexte) → zone 7.');
+            addLog(`Construction : ligne d'en-tête (« ${headerTypeField.value} : ${headerDateField.value} ») + en-tête « Memo A2 » + zone 6 (Aperçu Rendu), puis en-tête « Conversation » + zone 2 (Contexte) → zone 7.`);
 
             flashCopyZone7Button();
             copyFormatZone5Rich();
@@ -2402,6 +2589,7 @@
         fillSettingsFields();
         applyAppDataToUI(); // affichage immédiat avec les valeurs par défaut / cache local
         loadFromGitHub();   // puis remplacement par les données GitHub si configuré
+        initHeaderFields(); // restaure le champ 1 (local) et réinitialise le champ 2 à la date du jour
         highlightPasteCleanSendButton(); // mise en évidence au lancement de l'application
         {
             const cfgAtStart = getGhConfig();
