@@ -866,7 +866,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V55";
+        const VERSION = "V56";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1070,6 +1070,56 @@
             }
             const json = await res.json();
             return json.content.sha;
+        }
+
+        // -------------------------------------------------------------
+        // AJOUT DE LIGNE AU FICHIER GIST (journal "SECTION - ...")
+        // -------------------------------------------------------------
+
+        const GIST_ID = '19d9495bea22ee681aa829d908a4f41e';
+        const GIST_FILENAME = 'mon_fichier_GAME.txt';
+        const GIST_RAW_URL = 'https://gist.githubusercontent.com/Hammerinhank/19d9495bea22ee681aa829d908a4f41e/raw/mon_fichier_GAME.txt';
+
+        // Lit le contenu actuel du fichier Gist, y ajoute une ligne, puis
+        // réécrit le fichier via l'API GitHub (PATCH /gists/{id}). Utilise
+        // le même jeton GitHub que celui configuré dans "Réglages" ; ce
+        // jeton doit avoir le scope "gist" pour que l'écriture fonctionne.
+        async function appendLineToGist(newLine) {
+            const cfg = getGhConfig();
+            if (!cfg.token) {
+                showToast("Jeton GitHub manquant : impossible de mettre à jour le fichier Gist.");
+                addLog("Échec Gist : aucun jeton GitHub configuré (Réglages).");
+                return;
+            }
+            try {
+                const getRes = await fetch(GIST_RAW_URL + '?_=' + Date.now());
+                const currentContent = getRes.ok ? await getRes.text() : '';
+                const trimmed = currentContent.replace(/\n+$/, '');
+                const newContent = trimmed ? (trimmed + '\n' + newLine) : newLine;
+
+                const patchRes = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${cfg.token}`,
+                        'Accept': 'application/vnd.github+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            [GIST_FILENAME]: { content: newContent }
+                        }
+                    })
+                });
+                if (!patchRes.ok) {
+                    const errJson = await patchRes.json().catch(() => ({}));
+                    throw new Error(`${patchRes.status} ${errJson.message || ''}`);
+                }
+                addLog(`Gist : ligne ajoutée → fichier ${GIST_FILENAME} (gist ${GIST_ID}).`);
+            } catch (err) {
+                console.error(err);
+                showToast("Échec de la mise à jour du fichier Gist");
+                addLog(`Échec Gist : ${err.message}`);
+            }
         }
 
         function saveLocalCache() {
@@ -1662,6 +1712,11 @@
                 highlightPasteCleanSendButton();
                 addLog('Rappel (15 s après « Coller résultat ») : mise en évidence du bouton "Coller, nettoyer et envoyer vers ChatGPT".');
             }, 15000);
+
+            // Dernière étape du traitement : ajoute une ligne "SECTION - ..."
+            // au fichier Gist (champ 1 + champ 2 + contenu de la zone 4).
+            const gistLine = `SECTION - ${headerTypeField.value} : ${headerDateField.value}\n${formatZone2.value}`;
+            await appendLineToGist(gistLine);
         }
 
         // Repris du bouton "↕️ Aérer Sections" du Transformateur Couleur :
