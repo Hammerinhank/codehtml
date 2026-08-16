@@ -201,7 +201,7 @@
         }
 
         /* Mise en évidence persistante (vert pur très lumineux) du bouton
-           "Coller résultat", tant qu'aucune autre action significative n'a
+           "Mettre en forme le résultat issu de ChatGPT", tant qu'aucune autre action significative n'a
            été effectuée après un clic sur "Envoyer vers ChatGPT". */
         .btn-highlight-green {
             background-color: #00e676 !important;
@@ -480,7 +480,7 @@
         }
 
         /* Message temporaire (15 s) affiché sous "Préparation de la requête
-           ChatGPT" après "Coller résultat", tant que le résultat est prêt
+           ChatGPT" après "Mettre en forme le résultat issu de ChatGPT", tant que le résultat est prêt
            dans le presse-papier. */
         .paste-result-message {
             display: none;
@@ -681,7 +681,7 @@
     <!-- ZONE ENCADRÉE : du bouton "Coller dans le Contexte" au bouton "Copier le texte rendu" -->
     <div class="workflow-group">
 
-    <!-- CHAMPS D'EN-TÊTE (type + date) insérés en tête du texte copié par "Coller résultat" -->
+    <!-- CHAMPS D'EN-TÊTE (type + date) insérés en tête du texte copié par "Mettre en forme le résultat issu de ChatGPT" -->
     <div class="combo-section">
         <div class="combo-container" style="margin-bottom: 0;">
             <select id="headerTypeField" style="width: 8ch; min-width: 8ch; flex: 0 0 auto;" data-tooltip="Valeur insérée en premier sur la ligne d'en-tête (liste définie dans « Paramétrage des requêtes à ChatGPT »)."></select>
@@ -722,7 +722,7 @@
 
     <!-- BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
     <div class="action-row">
-        <button class="btn-paste btn-flex" id="btnPasteResult" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 7 dans le presse-papier." onclick="pasteAndCopyRendered()">Coller résultat</button>
+        <button class="btn-paste btn-flex" id="btnPasteResult" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 7 dans le presse-papier." onclick="pasteAndCopyRendered()">Mettre en forme le résultat issu de ChatGPT</button>
     </div>
 
     <!-- ZONE REPLIABLE : MISE EN FORME -->
@@ -780,7 +780,7 @@
         <div id="formatZone4" class="wysiwyg" contenteditable="true"></div>
     </div>
 
-    <!-- MISE EN FORME - ZONE 5 : en-tête fixe injectée après traitement (bouton "Coller résultat") -->
+    <!-- MISE EN FORME - ZONE 5 : en-tête fixe injectée après traitement (bouton "Mettre en forme le résultat issu de ChatGPT") -->
     <div class="section" id="sectionFormat5">
         <div class="toolbar" id="tbFormat5">
             <h2>7. En-tête (Mémo)</h2>
@@ -790,7 +790,7 @@
                 <button id="btnCopyZone7" data-tooltip="Copie le contenu actuel de la fenêtre 7 (Memo A2 / Conversation) dans le presse-papier, avec sa mise en forme." onclick="copyFormatZone5Rich()">📋 Copier le texte rendu</button>
             </div>
         </div>
-        <div class="zone-desc">En-têtes fixes : « Memo A2 » suivi du contenu de la zone 6, puis « Conversation » suivi du contenu de la zone 2 — reconstruites automatiquement ici à chaque fois que le bouton « Coller résultat » termine son traitement.</div>
+        <div class="zone-desc">En-têtes fixes : « Memo A2 » suivi du contenu de la zone 6, puis « Conversation » suivi du contenu de la zone 2 — reconstruites automatiquement ici à chaque fois que le bouton « Mettre en forme le résultat issu de ChatGPT » termine son traitement.</div>
         <div id="formatZone5" class="wysiwyg" contenteditable="true"></div>
     </div>
 
@@ -882,7 +882,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V61";
+        const VERSION = "V62";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1692,7 +1692,7 @@
         }
 
         // En-têtes fixes injectées dans la zone 7 à chaque exécution complète
-        // du traitement "Coller résultat" (collage → aération/hyperliens →
+        // du traitement "Mettre en forme le résultat issu de ChatGPT" (collage → aération/hyperliens →
         // copie du rendu). Le contenu de la zone 6 est inséré après chacun
         // des deux titres.
         const HEADER_MEMO_A2 = '<h2 dir="ltr" style="line-height:1.4000000000000001;margin-top:0pt;margin-bottom:0pt;"><span style="font-size: 19pt; font-family: Roboto, sans-serif; color: rgb(34, 110, 147); background-color: transparent; font-weight: 400; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;">Memo A2</span></h2>';
@@ -1731,7 +1731,7 @@
                 pasteResultMessage.classList.add('show');
             }
 
-            // 15 s après la fin du traitement "Coller résultat", met en
+            // 15 s après la fin du traitement "Mettre en forme le résultat issu de ChatGPT", met en
             // évidence le bouton "Coller, nettoyer et envoyer vers ChatGPT"
             // pour inviter à poursuivre le flux, et efface le message
             // ci-dessus.
@@ -1741,7 +1741,7 @@
                     pasteResultMessage.classList.remove('show');
                     pasteResultMessage.textContent = '';
                 }
-                addLog('Rappel (15 s après « Coller résultat ») : mise en évidence du bouton "Coller, nettoyer et envoyer vers ChatGPT" et effacement du message.');
+                addLog('Rappel (15 s après « Mettre en forme le résultat issu de ChatGPT ») : mise en évidence du bouton "Coller, nettoyer et envoyer vers ChatGPT" et effacement du message.');
             }, 15000);
 
             // Dernière étape du traitement : ajoute une ligne "SECTION - ..."
@@ -2166,14 +2166,14 @@
             highlightPasteResultButton();
         }
 
-        // Fait passer le bouton "Coller résultat" en vert pur très lumineux,
+        // Fait passer le bouton "Mettre en forme le résultat issu de ChatGPT" en vert pur très lumineux,
         // pour signaler que "Envoyer vers ChatGPT" vient d'être actionné.
         function highlightPasteResultButton() {
             const btn = document.getElementById('btnPasteResult');
             if (btn) btn.classList.add('btn-highlight-green');
         }
 
-        // Ramène le bouton "Coller résultat" à sa couleur normale.
+        // Ramène le bouton "Mettre en forme le résultat issu de ChatGPT" à sa couleur normale.
         function clearPasteResultHighlight() {
             const btn = document.getElementById('btnPasteResult');
             if (btn) btn.classList.remove('btn-highlight-green');
@@ -2197,7 +2197,7 @@
         // Toute action significative (clic sur un bouton) éteint les mises
         // en évidence en cours — y compris un clic sur le bouton mis en
         // évidence lui-même. Exception : cliquer sur "Envoyer vers ChatGPT"
-        // n'éteint pas la mise en évidence de "Coller résultat" qu'il vient
+        // n'éteint pas la mise en évidence de "Mettre en forme le résultat issu de ChatGPT" qu'il vient
         // justement d'allumer.
         document.addEventListener('click', (e) => {
             const clickedButton = e.target.closest('button');
