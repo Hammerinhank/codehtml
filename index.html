@@ -692,6 +692,7 @@
                 <button class="btn-cleanup" data-tooltip="Retire les lignes vides, les lignes qui ne sont qu'une heure (ex: 10:03), les lignes contenant « http », et les lignes contenant les noms/mentions de la liste de filtrage." onclick="cleanupConversation()">Nettoyer conversation</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionContext')">Plein écran</button>
                 <button data-tooltip="Copie le contenu de la zone Contexte dans le presse-papier." onclick="copyContextText()">Copier</button>
+                <button class="btn-chatgpt" id="btnSendChatGPT" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
             </div>
         </div>
         <div class="zone-desc">Contenu ou données à traiter (ex : export d'une conversation). Ce texte est envoyé après les instructions vers ChatGPT, et peut être nettoyé automatiquement avant l'envoi.</div>
@@ -701,9 +702,8 @@
         </div>
     </div>
 
-    <!-- BOUTON D'ENVOI VERS CHATGPT + BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
+    <!-- BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
     <div class="action-row">
-        <button class="btn-chatgpt btn-flex" id="btnSendChatGPT" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
         <button class="btn-paste btn-flex" id="btnPasteResult" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 7 dans le presse-papier." onclick="pasteAndCopyRendered()">Coller résultat</button>
     </div>
 
@@ -768,7 +768,7 @@
             <div class="button-group">
                 <button class="btn-clear" data-tooltip="Efface le contenu de cette zone." onclick="clearFormatZone5()">Vider</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionFormat5')">Plein écran</button>
-                <button data-tooltip="Copie le contenu affiché ici avec sa mise en forme." onclick="copyFormatZone5Rich()">Copier le texte rendu (Riche)</button>
+                <button id="btnCopyZone7" data-tooltip="Copie le contenu actuel de la fenêtre 7 (Memo A2 / Conversation) dans le presse-papier, avec sa mise en forme." onclick="copyFormatZone5Rich()">📋 Copier le texte rendu</button>
             </div>
         </div>
         <div class="zone-desc">En-têtes fixes : « Memo A2 » suivi du contenu de la zone 6, puis « Conversation » suivi du contenu de la zone 2 — reconstruites automatiquement ici à chaque fois que le bouton « Coller résultat » termine son traitement.</div>
@@ -777,9 +777,6 @@
 
         </div>
     </div>
-
-    <!-- BOUTON COPIE RAPIDE DU CONTENU DE LA FENÊTRE 7 (hors zone Mise en forme) -->
-    <button class="btn-chatgpt btn-full-width" id="btnCopyZone7" data-tooltip="Copie le contenu actuel de la fenêtre 7 (Memo A2 / Conversation) dans le presse-papier, avec sa mise en forme." onclick="copyFormatZone5Rich()">📋 Copier le texte rendu (Zone 7)</button>
 
     </div>
 
@@ -866,7 +863,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V56";
+        const VERSION = "V59";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
