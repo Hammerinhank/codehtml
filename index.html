@@ -698,7 +698,6 @@
             <h2>📝 Préparation de la requête ChatGPT</h2>
             <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
         </div>
-        <div id="pasteResultMessage" class="paste-result-message"></div>
         <div class="zone-content closed" id="zoneBeforeContent">
 
     <!-- NOUVELLE FENÊTRE 2 : Contexte / Données à coller -->
@@ -732,6 +731,7 @@
             <h2>🎨 Mise en forme</h2>
             <span class="zone-arrow" id="zoneFormatArrow">▸</span>
         </div>
+        <div id="pasteResultMessage" class="paste-result-message"></div>
         <div class="zone-content closed" id="zoneFormatContent">
 
     <!-- MISE EN FORME - ZONE 2 -->
@@ -882,7 +882,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V60";
+        const VERSION = "V61";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
