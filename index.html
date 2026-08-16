@@ -479,6 +479,24 @@
             gap: 15px;
         }
 
+        /* Message temporaire (15 s) affiché sous "Préparation de la requête
+           ChatGPT" après "Coller résultat", tant que le résultat est prêt
+           dans le presse-papier. */
+        .paste-result-message {
+            display: none;
+            background: #c6f6d5;
+            color: #22543d;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .paste-result-message.show {
+            display: block;
+        }
+
         .zone-content.closed {
             display: none;
         }
@@ -680,6 +698,7 @@
             <h2>📝 Préparation de la requête ChatGPT</h2>
             <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
         </div>
+        <div id="pasteResultMessage" class="paste-result-message"></div>
         <div class="zone-content closed" id="zoneBeforeContent">
 
     <!-- NOUVELLE FENÊTRE 2 : Contexte / Données à coller -->
@@ -863,7 +882,7 @@
     <div id="toast" class="toast">Action effectuée avec succès !</div>
 
     <script>
-        const VERSION = "V59";
+        const VERSION = "V60";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1702,12 +1721,27 @@
             copyFormatZone5Rich();
             addLog("Copie : zone 7 → presse-papier.");
 
+            // Affiche, sous "Préparation de la requête ChatGPT", un message
+            // indiquant que le résultat est prêt dans le presse-papier —
+            // effacé au bout des mêmes 15 secondes que la mise en évidence
+            // ci-dessous.
+            const pasteResultMessage = document.getElementById('pasteResultMessage');
+            if (pasteResultMessage) {
+                pasteResultMessage.textContent = "Le résultat obtenu est dans le presse-papiers, prêt à être collé dans la page Google Site.";
+                pasteResultMessage.classList.add('show');
+            }
+
             // 15 s après la fin du traitement "Coller résultat", met en
             // évidence le bouton "Coller, nettoyer et envoyer vers ChatGPT"
-            // pour inviter à poursuivre le flux.
+            // pour inviter à poursuivre le flux, et efface le message
+            // ci-dessus.
             setTimeout(() => {
                 highlightPasteCleanSendButton();
-                addLog('Rappel (15 s après « Coller résultat ») : mise en évidence du bouton "Coller, nettoyer et envoyer vers ChatGPT".');
+                if (pasteResultMessage) {
+                    pasteResultMessage.classList.remove('show');
+                    pasteResultMessage.textContent = '';
+                }
+                addLog('Rappel (15 s après « Coller résultat ») : mise en évidence du bouton "Coller, nettoyer et envoyer vers ChatGPT" et effacement du message.');
             }, 15000);
 
             // Dernière étape du traitement : ajoute une ligne "SECTION - ..."
