@@ -293,6 +293,22 @@
             min-width: 140px;
         }
 
+        /* Bascule bleue compacte (déplie/replie la zone de détail),
+           positionnée à droite du bouton vert correspondant, sur la même
+           ligne, et nettement moins large que lui. */
+        .action-row .zone-toggle-compact {
+            position: static; /* annule le comportement "collant" hérité de .zone-title-bar */
+            flex: 0 0 56px;
+            min-width: 0;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .action-row .zone-toggle-compact .zone-arrow {
+            font-size: 17px;
+            opacity: 1;
+        }
+
         textarea {
             width: 100%;
             height: 100%;
@@ -914,15 +930,16 @@
         </div>
     </div>
 
-    <!-- BOUTON COLLAGE RAPIDE DANS LA FENÊTRE 2 (hors zone Préparation de la requête) -->
-    <button class="btn-paste btn-full-width" id="btnPasteCleanSend" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis déclenche « Envoyer vers ChatGPT »." onclick="pasteCleanAndSend()">Coller, nettoyer et envoyer vers ChatGPT</button>
+    <!-- BOUTON COLLAGE RAPIDE + BASCULE DE LA ZONE PRÉPARATION -->
+    <div class="action-row">
+        <button class="btn-paste btn-flex" id="btnPasteCleanSend" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis déclenche « Envoyer vers ChatGPT »." onclick="pasteCleanAndSend()">Coller, nettoyer et envoyer vers ChatGPT</button>
+        <div class="zone-title-bar zone-toggle-compact" onclick="toggleZone('zoneBefore')" data-tooltip="Afficher / masquer le détail : Instructions, Contexte…">
+            <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
+        </div>
+    </div>
 
     <!-- ZONE REPLIABLE AVANT LE BOUTON ENVOYER VERS CHATGPT -->
     <div class="collapsible-zone">
-        <div class="zone-title-bar" onclick="toggleZone('zoneBefore')">
-            <h2>📝 Préparation de la requête ChatGPT</h2>
-            <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
-        </div>
         <div class="zone-content closed" id="zoneBeforeContent">
 
     <!-- NOUVELLE FENÊTRE 2 : Contexte / Données à coller -->
@@ -945,17 +962,16 @@
         </div>
     </div>
 
-    <!-- BOUTON COLLAGE RAPIDE VERS LA ZONE 4 -->
+    <!-- BOUTON COLLAGE RAPIDE VERS LA ZONE 4 + BASCULE DE LA ZONE MISE EN FORME -->
     <div class="action-row">
         <button class="btn-paste btn-flex" id="btnPasteResult" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 7 dans le presse-papier." onclick="pasteAndCopyRendered()">Mettre en forme le résultat issu de ChatGPT</button>
+        <div class="zone-title-bar zone-toggle-compact" onclick="toggleZone('zoneFormat')" data-tooltip="Afficher / masquer le détail : Mise en forme…">
+            <span class="zone-arrow" id="zoneFormatArrow">▸</span>
+        </div>
     </div>
 
     <!-- ZONE REPLIABLE : MISE EN FORME -->
     <div class="collapsible-zone">
-        <div class="zone-title-bar" onclick="toggleZone('zoneFormat')">
-            <h2>🎨 Mise en forme</h2>
-            <span class="zone-arrow" id="zoneFormatArrow">▸</span>
-        </div>
         <div id="pasteResultMessage" class="paste-result-message"></div>
         <div class="zone-content closed" id="zoneFormatContent">
 
@@ -1118,7 +1134,7 @@
     </div>
 
     <script>
-        const VERSION = "V67";
+        const VERSION = "V68";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1942,7 +1958,6 @@
         async function pasteAndCopyRendered() {
             const pasted = await pasteToFormatZone2();
             if (!pasted) return;
-            openZoneAndScrollTo('zoneFormat');
             aererSectionsFormat();
 
             const zone6Content = formatZone4.innerHTML;
@@ -2321,7 +2336,6 @@
         async function pasteCleanAndSend() {
             const pasted = await pasteToContext();
             if (!pasted) return;
-            openZoneAndScrollTo('zoneBefore');
             flashSendButton();
             sendToChatGPT();
             markWorkflowStep(1, true);
