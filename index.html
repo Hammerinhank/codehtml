@@ -780,6 +780,50 @@
             box-shadow: none;
             opacity: 0.9;
         }
+
+        /* Bloc d'aide affiché en bas de l'onglet Travail (page de lancement) */
+        body[data-active-tab="travail"] #tabPanelAide { display: block; }
+
+        .help-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--blue);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            padding: 18px 18px 20px;
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: #4a5568;
+        }
+
+        .help-card h2 {
+            font-size: 15px;
+            color: var(--blue-darker);
+            margin-bottom: 12px;
+        }
+
+        .help-card h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--slate-dark);
+            margin: 16px 0 7px;
+        }
+
+        .help-card h3:first-of-type { margin-top: 0; }
+        .help-card p { margin-bottom: 8px; }
+        .help-card ul, .help-card ol { margin: 0 0 8px 20px; }
+        .help-card li { margin-bottom: 5px; }
+        .help-card strong { color: var(--ink); }
+
+        .help-card .help-tip {
+            margin-top: 14px;
+            background: #f7fafc;
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            font-size: 12.5px;
+            color: #718096;
+        }
     </style>
 </head>
 <body data-active-tab="travail">
@@ -1040,6 +1084,32 @@
 
     </div>
 
+    <!-- AIDE : texte explicatif affiché en bas de la page de lancement -->
+    <div class="help-card" data-tab="travail" id="tabPanelAide">
+        <h2>ℹ️ À propos de cette application</h2>
+
+        <h3>1. Ce que fait cette application</h3>
+        <p>Elle sert de <strong>passerelle entre une conversation brute et une page Google Sites mise en forme</strong>, en passant par ChatGPT. Le travail se fait en deux temps :</p>
+        <ul>
+            <li><strong>Aller :</strong> elle récupère le texte collé, le nettoie automatiquement (lignes vides, horodatages, liens, pseudos), y ajoute vos instructions permanentes, puis ouvre ChatGPT avec la requête déjà préparée.</li>
+            <li><strong>Retour :</strong> elle reprend la réponse de ChatGPT, l'aère (titres en gras, expressions avant « : » en orange), transforme chaque expression orange en lien cliquable vers ChatGPT, ajoute la ligne d'en-tête (type + date) et les titres « Memo A2 » et « Conversation », puis place le tout mis en forme dans le presse-papier.</li>
+        </ul>
+        <p>Vos réglages (listes, instructions, modèles, zones de texte) sont enregistrés sur GitHub et retrouvés sur tous vos appareils. Le journal des opérations reste sur cet appareil et se vide chaque jour.</p>
+
+        <h3>2. Comment l'utiliser</h3>
+        <ol>
+            <li>En haut de cet onglet, choisissez le <strong>type</strong> dans le petit menu et vérifiez la <strong>date</strong> (pré-remplie au jour même).</li>
+            <li>Copiez la conversation à traiter, puis appuyez sur <strong>« Coller, nettoyer et envoyer vers ChatGPT »</strong> : un onglet ChatGPT s'ouvre avec la requête complète.</li>
+            <li>Dans ChatGPT, <strong>copiez la réponse</strong> obtenue.</li>
+            <li>Revenez ici et appuyez sur <strong>« Mettre en forme le résultat issu de ChatGPT »</strong> (le bouton mis en évidence en vert) : le résultat final est aussitôt dans le presse-papier.</li>
+            <li><strong>Collez</strong> ce résultat dans votre page Google Sites.</li>
+        </ol>
+
+        <div class="help-tip">
+            <strong>Repères utiles :</strong> les flèches bleues ▸ à droite des deux boutons ouvrent le détail (Contexte, Texte, Résultat, Aperçu, En-tête) si vous voulez vérifier ou retoucher. Un appui long de 2 s sur un bouton affiche son explication ; un double-tap sur le titre d'une zone la passe en plein écran. L'onglet <strong>Paramètres</strong> contient les instructions et modèles envoyés à ChatGPT, l'onglet <strong>Réglages</strong> la connexion GitHub, et l'onglet <strong>Log</strong> la trace des opérations.
+        </div>
+    </div>
+
     <!-- ZONE REPLIABLE APRÈS LE BOUTON ENVOYER VERS CHATGPT -->
     <!-- Outil annexe, indépendant du flux principal : rattaché à l'onglet
          Réglages et visuellement marginalisé (voir .secondary-feature). -->
@@ -1134,7 +1204,7 @@
     </div>
 
     <script>
-        const VERSION = "V68";
+        const VERSION = "V69";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
