@@ -869,6 +869,7 @@
                 <button data-tooltip="Enregistre le jeton, le dépôt et le chemin de fichier saisis, puis recharge les données depuis GitHub." onclick="saveSettingsAndReload()">Enregistrer</button>
                 <button class="btn-toggle-fs" data-tooltip="Vérifie que le jeton et le dépôt indiqués permettent bien d'accéder à GitHub, sans rien modifier." onclick="testConnection()">Tester la connexion</button>
                 <button class="btn-add-combo" data-tooltip="Force l'envoi immédiat de toutes les données actuelles de l'application vers le dépôt GitHub." onclick="pushToGitHub()">Synchroniser maintenant</button>
+                <button class="btn-clear" data-tooltip="Lance une batterie de vérifications (jeton, dépôt, fichier, Gist, stockage local) et écrit tout le détail dans l'onglet Log." onclick="runFullDiagnostic()">🩺 Diagnostic complet</button>
             </div>
             <p style="font-size:11px;color:#718096;">Le jeton reste uniquement dans le stockage local de cet appareil ; il n'est jamais écrit dans le dépôt GitHub. Toutes les autres données de l'application (liste, instructions, contexte, contenu HTML) sont enregistrées dans le fichier ci-dessus du dépôt.</p>
         </div>
@@ -1204,7 +1205,7 @@
     </div>
 
     <script>
-        const VERSION = "V69";
+        const VERSION = "V70";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1275,12 +1276,14 @@
         const LS_LOCAL_CACHE = 'app_data_local_cache';
 
         function getGhConfig() {
+            const rawToken = localStorage.getItem(LS_TOKEN) || '';
             return {
-                token: localStorage.getItem(LS_TOKEN) || '',
-                owner: localStorage.getItem(LS_OWNER) || '',
-                repo: localStorage.getItem(LS_REPO) || '',
-                branch: localStorage.getItem(LS_BRANCH) || 'main',
-                path: localStorage.getItem(LS_PATH) || 'data.json'
+                token: rawToken.trim(),   // trim défensif : un espace ou un retour à la ligne collé
+                rawToken: rawToken,       // avec le jeton suffit à provoquer un 401
+                owner: (localStorage.getItem(LS_OWNER) || '').trim(),
+                repo: (localStorage.getItem(LS_REPO) || '').trim(),
+                branch: (localStorage.getItem(LS_BRANCH) || 'main').trim(),
+                path: (localStorage.getItem(LS_PATH) || 'data.json').trim()
             };
         }
 
@@ -1289,11 +1292,260 @@
         }
 
         function saveGhConfig() {
-            localStorage.setItem(LS_TOKEN, document.getElementById('ghToken').value.trim());
+            const before = getGhConfig();
+            const newToken = document.getElementById('ghToken').value.trim();
+            localStorage.setItem(LS_TOKEN, newToken);
             localStorage.setItem(LS_OWNER, document.getElementById('ghOwner').value.trim());
             localStorage.setItem(LS_REPO, document.getElementById('ghRepo').value.trim());
             localStorage.setItem(LS_BRANCH, document.getElementById('ghBranch').value.trim() || 'main');
             localStorage.setItem(LS_PATH, document.getElementById('ghPath').value.trim() || 'data.json');
+            const after = getGhConfig();
+            if (before.token !== after.token) {
+                addLog(`Réglages : jeton GitHub remplacé dans la clé localStorage « ${LS_TOKEN} » — ancien ${maskToken(before.token)} → nouveau ${maskToken(after.token)}.`);
+            } else {
+                addLog(`Réglages : jeton GitHub inchangé (${maskToken(after.token)}) dans la clé localStorage « ${LS_TOKEN} ».`);
+            }
+            addLog(`Réglages : cible = ${after.owner}/${after.repo}, branche « ${after.branch} », fichier « ${after.path} ».`);
+        }
+
+        // -------------------------------------------------------------
+        // OUTILS DE DIAGNOSTIC (traces détaillées dans l'onglet Log)
+        // -------------------------------------------------------------
+
+        // En-têtes de réponse renvoyés par l'API GitHub qui expliquent le
+        // plus souvent un refus : portées du jeton, quota, identifiant de
+        // requête (utile si l'on doit remonter le problème à GitHub).
+        const DIAG_HEADERS = [
+            'x-oauth-scopes',
+            'x-accepted-oauth-scopes',
+            'x-accepted-github-permissions',
+            'x-ratelimit-remaining',
+            'x-ratelimit-limit',
+            'x-github-request-id'
+        ];
+
+        // Empreinte lisible d'un jeton, SANS jamais l'écrire en entier :
+        // début, fin, longueur et famille. Deux jetons différents se
+        // distinguent immédiatement dans le journal.
+        function maskToken(t) {
+            if (!t) return '(aucun jeton)';
+            let kind;
+            if (t.startsWith('github_pat_')) kind = 'fine-grained (github_pat_)';
+            else if (t.startsWith('ghp_')) kind = 'classique (ghp_)';
+            else if (t.startsWith('gho_')) kind = 'OAuth (gho_)';
+            else if (t.startsWith('ghu_')) kind = 'utilisateur-serveur (ghu_)';
+            else if (t.startsWith('ghs_')) kind = 'installation/app (ghs_)';
+            else if (t.startsWith('ghr_')) kind = 'rafraîchissement (ghr_)';
+            else if (/^[0-9a-f]{40}$/i.test(t)) kind = 'ancien format hexadécimal (40 car.)';
+            else kind = 'format inconnu';
+            const head = t.slice(0, Math.min(14, t.length));
+            const tail = t.length > 6 ? t.slice(-4) : '';
+            return `${head}…${tail} (longueur ${t.length}, type ${kind})`;
+        }
+
+        // Signale les anomalies invisibles à l'œil nu dans le jeton stocké.
+        function tokenAnomalies(rawToken) {
+            const problems = [];
+            if (!rawToken) return ['jeton absent du stockage local'];
+            if (rawToken !== rawToken.trim()) problems.push('espaces ou retour à la ligne au début/à la fin');
+            if (/\s/.test(rawToken.trim())) problems.push('espace à l\'intérieur du jeton');
+            if (/[^\x21-\x7E]/.test(rawToken.trim())) problems.push('caractère non ASCII (guillemet typographique ? copie depuis une app ?)');
+            if (/^["']|["']$/.test(rawToken.trim())) problems.push('guillemets autour du jeton');
+            return problems;
+        }
+
+        function shortUrl(url) {
+            return String(url).replace('https://api.github.com', '').replace(/([?&])_=\d+/, '$1_=…');
+        }
+
+        function headersSummary(res) {
+            const parts = [];
+            DIAG_HEADERS.forEach(h => {
+                const v = res.headers.get(h);
+                if (v !== null) parts.push(`${h}=${v === '' ? '(vide)' : v}`);
+            });
+            return parts.length ? parts.join(' | ') : 'aucun en-tête de diagnostic exposé par le navigateur';
+        }
+
+        function interpretStatus(status) {
+            switch (status) {
+                case 401: return 'jeton refusé — expiré, révoqué, mal recopié, ou ce n\'est pas le jeton que vous croyez (voir l\'empreinte ci-dessus).';
+                case 403: return 'jeton reconnu mais action interdite — portée/permission manquante, quota dépassé, ou autorisation SSO d\'organisation non accordée.';
+                case 404: return 'ressource introuvable OU invisible pour ce jeton — GitHub renvoie 404 (et non 403) quand un jeton n\'a aucun accès à un dépôt privé. Vérifiez propriétaire/dépôt/branche/chemin et, pour un jeton fine-grained, que CE dépôt fait partie des dépôts autorisés.';
+                case 409: return 'conflit de version (sha) — le fichier a changé entre la lecture et l\'écriture.';
+                case 422: return 'requête refusée — sha absent/incorrect ou contenu invalide.';
+                case 429: return 'trop de requêtes (quota).';
+                default: return 'voir le message GitHub ci-dessus.';
+            }
+        }
+
+        // Enveloppe de fetch qui trace tout : méthode, URL, présence du
+        // jeton, code HTTP, durée, en-têtes de portée/quota, message
+        // d'erreur GitHub et interprétation en clair.
+        async function ghFetchLogged(label, url, options = {}) {
+            const method = (options.method || 'GET').toUpperCase();
+            const hasAuth = !!(options.headers && (options.headers.Authorization || options.headers.authorization));
+            const started = Date.now();
+            addLog(`▶ ${label} — ${method} ${shortUrl(url)} — ${hasAuth ? 'avec en-tête Authorization' : 'SANS en-tête Authorization'}`);
+            let res;
+            try {
+                res = await fetch(url, options);
+            } catch (err) {
+                addLog(`   ✗ ${label} — aucune réponse HTTP après ${Date.now() - started} ms : ${err.name} / ${err.message} — cause probable : réseau coupé, CORS, ou blocage par le navigateur/une extension.`);
+                throw err;
+            }
+            addLog(`   ← ${label} — HTTP ${res.status} ${res.statusText || ''} en ${Date.now() - started} ms — ${headersSummary(res)}`);
+            if (!res.ok) {
+                let detail = '';
+                try {
+                    const j = await res.clone().json();
+                    detail = `${j.message || '(sans message)'}${j.documentation_url ? ' — doc : ' + j.documentation_url : ''}`;
+                    if (Array.isArray(j.errors) && j.errors.length) {
+                        detail += ' — détails : ' + j.errors.map(e => e.message || e.code || JSON.stringify(e)).join(' ; ');
+                    }
+                } catch (e) {
+                    try { detail = (await res.clone().text()).slice(0, 200); } catch (e2) { detail = '(corps de réponse illisible)'; }
+                }
+                addLog(`   ⚠ ${label} — message GitHub : ${detail}`);
+                addLog(`   ⓘ ${label} — interprétation : ${interpretStatus(res.status)}`);
+            }
+            return res;
+        }
+
+        // Inventaire de toutes les clés du stockage local qui ressemblent à
+        // un jeton GitHub. C'est LE test décisif quand un même jeton marche
+        // dans d'autres apps mais pas ici : on voit tout de suite si la clé
+        // « gh_sync_token » utilisée par cette app contient bien le nouveau
+        // jeton, ou si elle est restée sur l'ancien.
+        function logLocalStorageTokenInventory() {
+            addLog('— Inventaire des jetons présents dans le stockage local de cette origine —');
+            let found = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                let v = '';
+                try { v = localStorage.getItem(k) || ''; } catch (e) { continue; }
+                const t = v.trim();
+                if (/^(ghp_|github_pat_|gho_|ghu_|ghs_|ghr_)/.test(t) || /^[0-9a-f]{40}$/i.test(t)) {
+                    found++;
+                    addLog(`   • clé « ${k} » → ${maskToken(t)}${k === LS_TOKEN ? '   ← clé utilisée par CETTE application' : ''}`);
+                } else if (t.length < 5000 && /(ghp_[A-Za-z0-9]{10,}|github_pat_[A-Za-z0-9_]{10,})/.test(t)) {
+                    const m = t.match(/(ghp_[A-Za-z0-9]{10,}|github_pat_[A-Za-z0-9_]{10,})/);
+                    found++;
+                    addLog(`   • clé « ${k} » → jeton imbriqué dans une valeur JSON/composite : ${maskToken(m[1])}`);
+                }
+            }
+            if (!found) addLog('   • aucune valeur ressemblant à un jeton GitHub trouvée dans le stockage local.');
+            addLog(`   • total : ${found} entrée(s). Si plusieurs empreintes différentes apparaissent, toutes vos apps n'utilisent pas le même jeton.`);
+        }
+
+        // Trace écrite au lancement de l'application.
+        function logStartupDiagnostic() {
+            const cfg = getGhConfig();
+            addLog(`=== Démarrage ${VERSION} — ${new Date().toLocaleString('fr-FR')} ===`);
+            addLog(`Contexte : page ${location.href}`);
+            addLog(`Contexte : origine « ${location.origin} » — le stockage local (et donc le jeton) est propre à cette origine ; une même app ouverte depuis une autre adresse ne voit pas le même jeton.`);
+            addLog(`Contexte : navigateur ${navigator.userAgent}`);
+            addLog(`Réglages lus : propriétaire « ${cfg.owner || '(vide)'} », dépôt « ${cfg.repo || '(vide)'} », branche « ${cfg.branch} » fichier « ${cfg.path} ».`);
+            addLog(`Réglages lus : jeton depuis la clé « ${LS_TOKEN} » → ${maskToken(cfg.token)}`);
+            const anomalies = tokenAnomalies(cfg.rawToken);
+            if (anomalies.length) addLog(`⚠ Anomalies détectées sur le jeton stocké : ${anomalies.join(' ; ')}.`);
+            else addLog('Jeton stocké : aucune anomalie de forme détectée.');
+            logLocalStorageTokenInventory();
+        }
+
+        // Batterie complète de vérifications, déclenchée par le bouton
+        // « Diagnostic complet » des Réglages. Ne modifie rien.
+        async function runFullDiagnostic() {
+            const cfg = getGhConfig();
+            addLog('════════ DIAGNOSTIC COMPLET — début ════════');
+            logStartupDiagnostic();
+            setSyncStatus('⏳ Diagnostic en cours…', 'busy');
+
+            if (!cfg.token) {
+                addLog('✗ Diagnostic interrompu : aucun jeton enregistré dans cette application (onglet Réglages).');
+                setSyncStatus('✗ Aucun jeton enregistré', 'error');
+                addLog('════════ DIAGNOSTIC COMPLET — fin ════════');
+                return;
+            }
+
+            const authHeaders = {
+                'Authorization': `Bearer ${cfg.token}`,
+                'Accept': 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28'
+            };
+            let ok = 0, ko = 0;
+
+            // 1) Identité du jeton
+            try {
+                const r = await ghFetchLogged('1/5 Identité du jeton (GET /user)', 'https://api.github.com/user', { headers: authHeaders });
+                if (r.ok) {
+                    const u = await r.json();
+                    ok++;
+                    addLog(`   ✓ Jeton valide, rattaché au compte GitHub « ${u.login} » (id ${u.id}).`);
+                    const scopes = r.headers.get('x-oauth-scopes');
+                    if (scopes === null) addLog('   ⓘ Aucun en-tête x-oauth-scopes : c\'est normal pour un jeton fine-grained (ses droits sont définis par dépôt et par permission, pas par « scopes »).');
+                    else addLog(`   ⓘ Portées (scopes) du jeton classique : ${scopes === '' ? '(aucune — jeton sans droit)' : scopes}`);
+                } else { ko++; }
+            } catch (e) { ko++; }
+
+            // 2) Accès au dépôt de données
+            if (cfg.owner && cfg.repo) {
+                try {
+                    const r = await ghFetchLogged('2/5 Accès au dépôt', `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`, { headers: authHeaders });
+                    if (r.ok) {
+                        const repo = await r.json();
+                        ok++;
+                        const p = repo.permissions || {};
+                        addLog(`   ✓ Dépôt « ${repo.full_name} » accessible — ${repo.private ? 'privé' : 'public'}, branche par défaut « ${repo.default_branch} ».`);
+                        addLog(`   ⓘ Droits du jeton sur ce dépôt : lecture=${!!p.pull}, écriture=${!!p.push}, admin=${!!p.admin}. L'écriture (push) est indispensable pour la sauvegarde.`);
+                        if (repo.default_branch !== cfg.branch) addLog(`   ⚠ La branche configurée (« ${cfg.branch} ») diffère de la branche par défaut du dépôt (« ${repo.default_branch} »).`);
+                    } else { ko++; }
+                } catch (e) { ko++; }
+            } else {
+                addLog('2/5 Accès au dépôt : ignoré (propriétaire ou dépôt non renseigné dans les Réglages).');
+            }
+
+            // 3) Accès au fichier de données
+            if (cfg.owner && cfg.repo) {
+                try {
+                    const url = `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${encodeURIComponent(cfg.path)}?ref=${encodeURIComponent(cfg.branch)}&_=${Date.now()}`;
+                    const r = await ghFetchLogged('3/5 Lecture du fichier de données', url, { headers: authHeaders });
+                    if (r.ok) {
+                        const f = await r.json();
+                        ok++;
+                        addLog(`   ✓ Fichier « ${f.path} » lisible — ${f.size} octets, sha ${String(f.sha).slice(0, 10)}…`);
+                    } else if (r.status === 404) {
+                        addLog('   ⓘ Fichier absent (404) : il sera créé à la première synchronisation — sauf si le 404 vient en réalité d\'un manque d\'accès au dépôt (voir l\'étape 2).');
+                    } else { ko++; }
+                } catch (e) { ko++; }
+            }
+
+            // 4) Accès en lecture au Gist (journal "SECTION - ...")
+            try {
+                const r = await ghFetchLogged('4/5 Accès au Gist', `https://api.github.com/gists/${GIST_ID}`, { headers: authHeaders });
+                if (r.ok) {
+                    const g = await r.json();
+                    ok++;
+                    addLog(`   ✓ Gist ${GIST_ID} lisible — fichiers : ${Object.keys(g.files || {}).join(', ') || '(aucun)'}.`);
+                    addLog('   ⓘ La lecture ne prouve pas l\'écriture : l\'ajout de ligne (PATCH) exige la portée « gist » sur un jeton classique, ou la permission « Gists » (lecture ET écriture) sur un jeton fine-grained.');
+                } else { ko++; }
+            } catch (e) { ko++; }
+
+            // 5) Appel sans jeton, pour distinguer un problème de jeton d'un problème de réseau
+            try {
+                const r = await ghFetchLogged('5/5 Appel anonyme de contrôle', 'https://api.github.com/rate_limit', {});
+                if (r.ok) {
+                    ok++;
+                    addLog('   ✓ L\'API GitHub est joignable sans jeton : le réseau et le navigateur ne sont donc pas en cause.');
+                } else { ko++; }
+            } catch (e) { ko++; }
+
+            addLog(`Résultat : ${ok} vérification(s) réussie(s), ${ko} en échec. Utilisez le bouton « Copier » de cet onglet pour transmettre le journal.`);
+            addLog('════════ DIAGNOSTIC COMPLET — fin ════════');
+            setSyncStatus(ko === 0 ? '✓ Diagnostic terminé sans erreur' : `✗ Diagnostic : ${ko} échec(s) — voir l'onglet Log`, ko === 0 ? 'ok' : 'error');
+            switchTab('log');
+            openZoneAndScrollTo('zoneLog');
+            showToast('Diagnostic terminé — voir l\'onglet Log');
         }
 
         function fillSettingsFields() {
@@ -1323,29 +1575,41 @@
 
         async function testConnection() {
             const cfg = getGhConfig();
+            addLog(`Test de connexion demandé — cible ${cfg.owner || '(vide)'}/${cfg.repo || '(vide)'}, jeton ${maskToken(cfg.token)}.`);
+            const anomalies = tokenAnomalies(cfg.rawToken);
+            if (anomalies.length) addLog(`⚠ Anomalies sur le jeton stocké : ${anomalies.join(' ; ')}.`);
             if (!ghConfigComplete(cfg)) {
                 setSyncStatus('⚠️ Jeton, utilisateur et dépôt requis', 'warn');
+                addLog('Test de connexion abandonné : jeton, propriétaire ou dépôt manquant dans les Réglages.');
                 return;
             }
             setSyncStatus('⏳ Test en cours…', 'busy');
             try {
-                const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`, {
+                const res = await ghFetchLogged('Test de connexion (GET /repos)', `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`, {
                     headers: {
                         'Authorization': `Bearer ${cfg.token}`,
-                        'Accept': 'application/vnd.github+json'
+                        'Accept': 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28'
                     }
                 });
                 if (res.ok) {
+                    const repo = await res.json();
+                    const p = repo.permissions || {};
                     setSyncStatus('✓ Connexion au dépôt réussie', 'ok');
+                    addLog(`✓ Test de connexion réussi sur « ${repo.full_name} » (${repo.private ? 'privé' : 'public'}) — droits : lecture=${!!p.pull}, écriture=${!!p.push}, admin=${!!p.admin}.`);
                 } else if (res.status === 404) {
                     setSyncStatus('✗ Dépôt introuvable ou jeton sans accès', 'error');
+                    addLog('✗ Test de connexion : dépôt introuvable pour ce jeton. Lancez « Diagnostic complet » pour savoir si le jeton lui-même est valide.');
                 } else if (res.status === 401) {
                     setSyncStatus('✗ Jeton invalide', 'error');
+                    addLog('✗ Test de connexion : jeton refusé par GitHub (401).');
                 } else {
                     setSyncStatus(`✗ Erreur (${res.status})`, 'error');
+                    addLog(`✗ Test de connexion : erreur HTTP ${res.status}.`);
                 }
             } catch (err) {
                 setSyncStatus('✗ Erreur réseau : ' + err.message, 'error');
+                addLog(`✗ Test de connexion : erreur réseau ${err.name} — ${err.message}.`);
             }
         }
 
@@ -1368,20 +1632,32 @@
         async function ghGetFile() {
             const cfg = getGhConfig();
             const url = `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${encodeURIComponent(cfg.path)}?ref=${encodeURIComponent(cfg.branch)}&_=${Date.now()}`;
-            const res = await fetch(url, {
+            const res = await ghFetchLogged('Lecture du fichier de données', url, {
                 headers: {
                     'Authorization': `Bearer ${cfg.token}`,
-                    'Accept': 'application/vnd.github+json'
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28'
                 }
             });
-            if (res.status === 404) return { exists: false, sha: null, data: null };
+            if (res.status === 404) {
+                addLog('   ⓘ Lecture : fichier absent du dépôt (404) — soit il n\'existe pas encore, soit le jeton n\'a aucun accès à ce dépôt.');
+                return { exists: false, sha: null, data: null };
+            }
             if (!res.ok) {
                 const errJson = await res.json().catch(() => ({}));
                 throw new Error(`${res.status} ${errJson.message || ''}`);
             }
             const json = await res.json();
             const content = b64DecodeUnicode((json.content || '').replace(/\n/g, ''));
-            return { exists: true, sha: json.sha, data: JSON.parse(content) };
+            addLog(`   ✓ Lecture : ${json.size} octets reçus, sha ${String(json.sha).slice(0, 10)}…`);
+            let parsed;
+            try {
+                parsed = JSON.parse(content);
+            } catch (err) {
+                addLog(`   ✗ Lecture : le fichier « ${cfg.path} » n'est pas un JSON exploitable (${err.message}) — les données locales seront conservées.`);
+                throw err;
+            }
+            return { exists: true, sha: json.sha, data: parsed };
         }
 
         async function ghPutFile(dataObj, sha) {
@@ -1393,12 +1669,14 @@
                 branch: cfg.branch
             };
             if (sha) body.sha = sha;
-            const res = await fetch(url, {
+            addLog(`   ⓘ Écriture : ${body.content.length} caractères base64 vers « ${cfg.path} » sur la branche « ${cfg.branch} », sha de référence ${sha ? String(sha).slice(0, 10) + '…' : '(aucun — création du fichier)'}.`);
+            const res = await ghFetchLogged('Écriture du fichier de données', url, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${cfg.token}`,
                     'Accept': 'application/vnd.github+json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-GitHub-Api-Version': '2022-11-28'
                 },
                 body: JSON.stringify(body)
             });
@@ -1407,6 +1685,7 @@
                 throw new Error(`${res.status} ${errJson.message || ''}`);
             }
             const json = await res.json();
+            addLog(`   ✓ Écriture : commit ${String(json.commit && json.commit.sha).slice(0, 10)}…, nouveau sha de fichier ${String(json.content.sha).slice(0, 10)}…`);
             return json.content.sha;
         }
 
@@ -1429,18 +1708,22 @@
                 addLog("Échec Gist : aucun jeton GitHub configuré (Réglages).");
                 return;
             }
+            addLog(`Gist : tentative d'ajout d'une ligne au fichier ${GIST_FILENAME} (gist ${GIST_ID}) avec le jeton ${maskToken(cfg.token)}.`);
             try {
-                const getRes = await fetch(GIST_RAW_URL + '?_=' + Date.now());
+                const getRes = await ghFetchLogged('Gist — lecture du contenu actuel (URL brute)', GIST_RAW_URL + '?_=' + Date.now(), {});
                 const currentContent = getRes.ok ? await getRes.text() : '';
+                if (!getRes.ok) addLog('   ⚠ Gist : lecture du contenu actuel impossible — la ligne sera ajoutée à un contenu vide, ce qui écraserait le fichier. Vérifiez avant de poursuivre.');
                 const trimmed = currentContent.replace(/\n+$/, '');
                 const newContent = trimmed ? (trimmed + '\n' + newLine) : newLine;
+                addLog(`   ⓘ Gist : contenu actuel ${currentContent.length} caractères → nouveau contenu ${newContent.length} caractères.`);
 
-                const patchRes = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                const patchRes = await ghFetchLogged('Gist — écriture (PATCH /gists)', `https://api.github.com/gists/${GIST_ID}`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': `Bearer ${cfg.token}`,
                         'Accept': 'application/vnd.github+json',
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-GitHub-Api-Version': '2022-11-28'
                     },
                     body: JSON.stringify({
                         files: {
@@ -1449,6 +1732,9 @@
                     })
                 });
                 if (!patchRes.ok) {
+                    if (patchRes.status === 401 || patchRes.status === 403 || patchRes.status === 404) {
+                        addLog('   ⓘ Gist : rappel — l\'écriture dans un Gist exige la portée « gist » (jeton classique ghp_) ou la permission « Gists » en lecture ET écriture (jeton fine-grained github_pat_). Un jeton qui accède parfaitement aux dépôts peut échouer ici pour cette seule raison.');
+                    }
                     const errJson = await patchRes.json().catch(() => ({}));
                     throw new Error(`${patchRes.status} ${errJson.message || ''}`);
                 }
@@ -1476,9 +1762,11 @@
 
         async function loadFromGitHub() {
             const cfg = getGhConfig();
+            addLog(`Chargement demandé — ${cfg.owner || '(vide)'}/${cfg.repo || '(vide)'}, branche « ${cfg.branch} », fichier « ${cfg.path} », jeton ${maskToken(cfg.token)}.`);
             if (!ghConfigComplete(cfg)) {
                 setSyncStatus('⚠️ Configuration GitHub requise (Réglages)', 'warn');
                 settingsBody.classList.add('open');
+                addLog(`Chargement abandonné : configuration incomplète (jeton ${cfg.token ? 'présent' : 'ABSENT'}, propriétaire ${cfg.owner ? 'présent' : 'ABSENT'}, dépôt ${cfg.repo ? 'présent' : 'ABSENT'}) → copie locale utilisée.`);
                 loadLocalCacheIntoApp();
                 return;
             }
@@ -1501,7 +1789,8 @@
             } catch (err) {
                 console.error(err);
                 setSyncStatus('✗ Échec chargement (copie locale utilisée) : ' + err.message, 'error');
-                addLog(`Échec de chargement depuis GitHub (${cfg.owner}/${cfg.repo}) → utilisation de la copie locale de l'appareil.`);
+                addLog(`✗ Échec de chargement depuis GitHub (${cfg.owner}/${cfg.repo}, ${cfg.path}) : ${err.name} — ${err.message} → utilisation de la copie locale de l'appareil.`);
+                addLog('   ⓘ Lancez « Diagnostic complet » dans l\'onglet Réglages pour identifier précisément la cause (jeton, dépôt, branche ou chemin).');
                 loadLocalCacheIntoApp();
             }
         }
@@ -1514,8 +1803,10 @@
 
         async function pushToGitHub() {
             const cfg = getGhConfig();
+            addLog(`Synchronisation demandée — ${cfg.owner || '(vide)'}/${cfg.repo || '(vide)'}, fichier « ${cfg.path} », jeton ${maskToken(cfg.token)}.`);
             if (!ghConfigComplete(cfg)) {
                 setSyncStatus('⚠️ Configuration GitHub requise (Réglages)', 'warn');
+                addLog(`Synchronisation abandonnée : configuration incomplète (jeton ${cfg.token ? 'présent' : 'ABSENT'}, propriétaire ${cfg.owner ? 'présent' : 'ABSENT'}, dépôt ${cfg.repo ? 'présent' : 'ABSENT'}).`);
                 return;
             }
             setSyncStatus('⏳ Synchronisation…', 'busy');
@@ -1528,7 +1819,8 @@
             } catch (err) {
                 console.error(err);
                 setSyncStatus('✗ Échec sync : ' + err.message, 'error');
-                addLog(`Échec de synchronisation vers GitHub (${cfg.owner}/${cfg.repo}) : ${err.message}.`);
+                addLog(`✗ Échec de synchronisation vers GitHub (${cfg.owner}/${cfg.repo}, ${cfg.path}) : ${err.name} — ${err.message}.`);
+                addLog('   ⓘ Un échec en écriture alors que la lecture fonctionne indique presque toujours un jeton sans droit d\'écriture (Contents : Read and write) sur ce dépôt.');
             }
         }
 
@@ -2767,10 +3059,23 @@
             }
         }
 
+        // Le journal étant devenu beaucoup plus bavard (diagnostic GitHub),
+        // on le borne à 300 000 caractères : au-delà, la moitié la plus
+        // ancienne est retirée pour ne jamais saturer le stockage local.
+        const LOG_MAX_CHARS = 300000;
+
         function saveLogToLocalStorage() {
-            localStorage.setItem(LS_LOG_DATE, todayDateString());
-            localStorage.setItem(LS_LOG_CONTENT, logText.value);
-            localStorage.setItem(LS_LOG_COUNTER, String(logCounter));
+            if (logText.value.length > LOG_MAX_CHARS) {
+                const kept = logText.value.slice(-Math.floor(LOG_MAX_CHARS / 2));
+                logText.value = '… (début du journal tronqué pour ne pas saturer le stockage local) …\n' + kept.slice(kept.indexOf('\n') + 1);
+            }
+            try {
+                localStorage.setItem(LS_LOG_DATE, todayDateString());
+                localStorage.setItem(LS_LOG_CONTENT, logText.value);
+                localStorage.setItem(LS_LOG_COUNTER, String(logCounter));
+            } catch (e) {
+                console.error('Journal non enregistré dans le stockage local :', e);
+            }
         }
 
         // Ajoute une ligne numérotée au journal, décrivant une étape d'une
@@ -3034,6 +3339,7 @@
         // -------------------------------------------------------------
 
         initLog(); // restaure ou remet à zéro le journal local (max 24 h) avant toute opération
+        logStartupDiagnostic(); // trace immédiate : origine, réglages, empreinte du jeton, inventaire des jetons locaux
         fillSettingsFields();
         applyAppDataToUI(); // affichage immédiat avec les valeurs par défaut / cache local
         loadFromGitHub();   // puis remplacement par les données GitHub si configuré
