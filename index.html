@@ -870,6 +870,7 @@
                 <button class="btn-toggle-fs" data-tooltip="Vérifie que le jeton et le dépôt indiqués permettent bien d'accéder à GitHub, sans rien modifier." onclick="testConnection()">Tester la connexion</button>
                 <button class="btn-add-combo" data-tooltip="Force l'envoi immédiat de toutes les données actuelles de l'application vers le dépôt GitHub." onclick="pushToGitHub()">Synchroniser maintenant</button>
                 <button class="btn-clear" data-tooltip="Lance une batterie de vérifications (jeton, dépôt, fichier, Gist, stockage local) et écrit tout le détail dans l'onglet Log." onclick="runFullDiagnostic()">🩺 Diagnostic complet</button>
+                <button class="btn-clear" data-tooltip="Teste un par un tous les jetons GitHub présents sur cet appareil et indique lequel est encore accepté pour ce dépôt." onclick="testAllStoredTokens(true)">🔑 Tester tous les jetons</button>
             </div>
             <p style="font-size:11px;color:#718096;">Le jeton reste uniquement dans le stockage local de cet appareil ; il n'est jamais écrit dans le dépôt GitHub. Toutes les autres données de l'application (liste, instructions, contexte, contenu HTML) sont enregistrées dans le fichier ci-dessus du dépôt.</p>
         </div>
@@ -1205,7 +1206,7 @@
     </div>
 
     <script>
-        const VERSION = "V70";
+        const VERSION = "V71";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1417,40 +1418,154 @@
         // dans d'autres apps mais pas ici : on voit tout de suite si la clé
         // « gh_sync_token » utilisée par cette app contient bien le nouveau
         // jeton, ou si elle est restée sur l'ancien.
-        function logLocalStorageTokenInventory() {
-            addLog('— Inventaire des jetons présents dans le stockage local de cette origine —');
-            let found = 0;
+        // Empreinte cryptographique (SHA-256, 8 caractères) : deux jetons
+        // identiques donnent la même empreinte, deux jetons qui ne diffèrent
+        // qu'en leur milieu donnent des empreintes différentes. C'est le
+        // seul moyen fiable de comparer les jetons de deux applications
+        // sans jamais les écrire en clair dans le journal.
+        async function tokenHash(t) {
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+                return Array.from(new Uint8Array(buf)).slice(0, 4).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                return 'empreinte-indisponible';
+            }
+        }
+
+        // Récupère tous les jetons GitHub présents dans le stockage local,
+        // qu'ils soient stockés en valeur directe ou imbriqués dans un objet
+        // JSON de configuration.
+        function collectStoredTokens() {
+            const found = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const k = localStorage.key(i);
+                if (k === LS_LOG_CONTENT) continue; // le journal lui-même peut contenir des fragments
                 let v = '';
                 try { v = localStorage.getItem(k) || ''; } catch (e) { continue; }
                 const t = v.trim();
                 if (/^(ghp_|github_pat_|gho_|ghu_|ghs_|ghr_)/.test(t) || /^[0-9a-f]{40}$/i.test(t)) {
-                    found++;
-                    addLog(`   • clé « ${k} » → ${maskToken(t)}${k === LS_TOKEN ? '   ← clé utilisée par CETTE application' : ''}`);
-                } else if (t.length < 5000 && /(ghp_[A-Za-z0-9]{10,}|github_pat_[A-Za-z0-9_]{10,})/.test(t)) {
-                    const m = t.match(/(ghp_[A-Za-z0-9]{10,}|github_pat_[A-Za-z0-9_]{10,})/);
-                    found++;
-                    addLog(`   • clé « ${k} » → jeton imbriqué dans une valeur JSON/composite : ${maskToken(m[1])}`);
+                    found.push({ key: k, token: t, nested: false });
+                } else if (t.length < 5000) {
+                    const m = t.match(/(github_pat_[A-Za-z0-9_]{40,}|ghp_[A-Za-z0-9]{30,})/);
+                    if (m) found.push({ key: k, token: m[1], nested: true });
                 }
             }
-            if (!found) addLog('   • aucune valeur ressemblant à un jeton GitHub trouvée dans le stockage local.');
-            addLog(`   • total : ${found} entrée(s). Si plusieurs empreintes différentes apparaissent, toutes vos apps n'utilisent pas le même jeton.`);
+            return found;
+        }
+
+        // Inventaire des jetons du stockage local, avec empreinte
+        // cryptographique : on voit immédiatement quelles applications
+        // partagent exactement le même jeton et lesquelles non.
+        async function logLocalStorageTokenInventory() {
+            const entries = collectStoredTokens();
+            addLog('— Inventaire des jetons présents dans le stockage local de cette origine —');
+            if (!entries.length) {
+                addLog('   • aucune valeur ressemblant à un jeton GitHub trouvée dans le stockage local.');
+                return [];
+            }
+            const groups = new Map();
+            for (const e of entries) {
+                e.hash = await tokenHash(e.token);
+                addLog(`   • clé « ${e.key} »${e.nested ? ' (jeton imbriqué dans une config JSON)' : ''} → ${maskToken(e.token)} — empreinte ${e.hash}${e.key === LS_TOKEN ? '   ← clé utilisée par CETTE application' : ''}`);
+                if (!groups.has(e.hash)) groups.set(e.hash, []);
+                groups.get(e.hash).push(e.key);
+            }
+            addLog(`   • ${entries.length} entrée(s) pour ${groups.size} jeton(s) RÉELLEMENT distinct(s) :`);
+            groups.forEach((keys, h) => {
+                addLog(`      – empreinte ${h} → ${keys.length} app(s) : ${keys.join(', ')}`);
+            });
+            const mine = entries.find(e => e.key === LS_TOKEN);
+            if (mine) {
+                const sameHash = (groups.get(mine.hash) || []).filter(k => k !== LS_TOKEN);
+                if (sameHash.length) addLog(`   • Cette application utilise exactement le même jeton que : ${sameHash.join(', ')}. Si celles-ci fonctionnent et pas celle-ci, le problème n'est PAS le jeton stocké.`);
+                else addLog('   • ⚠ Cette application est la SEULE à utiliser ce jeton : aucune autre app ne partage cette empreinte. La rotation du jeton l\'a probablement oubliée.');
+            }
+            return entries;
+        }
+
+        // Teste chaque jeton distinct trouvé dans le stockage local contre
+        // l'API GitHub. Répond à la question décisive : « quel jeton, parmi
+        // ceux présents sur cet appareil, est réellement accepté par GitHub
+        // pour ce dépôt ? »
+        async function testAllStoredTokens(offerAdoption = true) {
+            const cfg = getGhConfig();
+            addLog('──── Test de TOUS les jetons trouvés sur cet appareil ────');
+            const entries = await logLocalStorageTokenInventory();
+            const seen = new Map();
+            entries.forEach(e => { if (!seen.has(e.hash)) seen.set(e.hash, e); });
+            if (!seen.size) { addLog('Aucun jeton à tester.'); return null; }
+
+            const working = [];
+            let n = 0;
+            for (const [hash, e] of seen) {
+                n++;
+                const headers = { 'Authorization': `Bearer ${e.token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+                let valid = false, login = '';
+                try {
+                    const r = await ghFetchLogged(`Jeton ${n}/${seen.size} (empreinte ${hash}) — identité`, 'https://api.github.com/user', { headers });
+                    if (r.ok) { const u = await r.json(); login = u.login; valid = true; }
+                } catch (err) { /* déjà tracé */ }
+
+                if (!valid) {
+                    addLog(`   ✗ Jeton d'empreinte ${hash} (clés : ${entries.filter(x => x.hash === hash).map(x => x.key).join(', ')}) : REFUSÉ par GitHub — expiré ou révoqué.`);
+                    continue;
+                }
+                addLog(`   ✓ Jeton d'empreinte ${hash} : valide, compte « ${login} ».`);
+
+                if (cfg.owner && cfg.repo) {
+                    try {
+                        const r2 = await ghFetchLogged(`Jeton ${n}/${seen.size} (empreinte ${hash}) — accès à ${cfg.owner}/${cfg.repo}`, `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`, { headers });
+                        if (r2.ok) {
+                            const repo = await r2.json();
+                            const p = repo.permissions || {};
+                            addLog(`   ✓ Empreinte ${hash} : accès au dépôt « ${repo.full_name} » — écriture=${!!p.push}.`);
+                            if (p.push) working.push({ hash, entry: e, login });
+                            else addLog(`   ⚠ Empreinte ${hash} : lecture seule sur ce dépôt, la sauvegarde échouerait.`);
+                        } else {
+                            addLog(`   ✗ Empreinte ${hash} : jeton valide MAIS sans accès au dépôt ${cfg.owner}/${cfg.repo} (jeton fine-grained limité à d'autres dépôts ?).`);
+                        }
+                    } catch (err) { /* déjà tracé */ }
+                }
+            }
+
+            const currentHash = await tokenHash(cfg.token);
+            addLog(`Bilan : jeton actuel de cette app = empreinte ${currentHash} ; ${working.length} jeton(s) pleinement fonctionnel(s) trouvé(s) sur cet appareil.`);
+            if (!working.length) {
+                addLog('⇒ AUCUN jeton stocké sur cet appareil n\'est accepté par GitHub avec droit d\'écriture sur ce dépôt. Il faut régénérer un jeton sur github.com, puis le diffuser dans vos apps. Vos autres applications semblent fonctionner uniquement parce qu\'elles n\'ont pas resynchronisé depuis.');
+                addLog('   ⓘ Pour un jeton fine-grained : Settings → Developer settings → Personal access tokens → Fine-grained → vérifier la date d\'expiration, la liste des dépôts autorisés (dont ce dépôt) et la permission « Contents : Read and write ».');
+                return null;
+            }
+            const better = working.find(w => w.hash !== currentHash);
+            addLog(`⇒ Jeton(s) fonctionnel(s) : ${working.map(w => `empreinte ${w.hash} (clé ${w.entry.key})`).join(' ; ')}.`);
+            if (better && offerAdoption) {
+                addLog(`⇒ Le jeton de la clé « ${better.entry.key} » fonctionne alors que celui de cette app est refusé : ils sont donc RÉELLEMENT différents malgré une apparence proche.`);
+                if (confirm(`Un jeton fonctionnel a été trouvé dans « ${better.entry.key} ».\n\nL'adopter pour cette application ?`)) {
+                    localStorage.setItem(LS_TOKEN, better.entry.token);
+                    document.getElementById('ghToken').value = better.entry.token;
+                    addLog(`Adoption : le jeton d'empreinte ${better.hash} (issu de « ${better.entry.key} ») est désormais celui de cette application.`);
+                    showToast('Jeton adopté — rechargement des données…');
+                    await loadFromGitHub();
+                } else {
+                    addLog('Adoption refusée par l\'utilisateur : le jeton de cette application reste inchangé.');
+                }
+            }
+            return working[0] || null;
         }
 
         // Trace écrite au lancement de l'application.
-        function logStartupDiagnostic() {
+        async function logStartupDiagnostic() {
             const cfg = getGhConfig();
             addLog(`=== Démarrage ${VERSION} — ${new Date().toLocaleString('fr-FR')} ===`);
             addLog(`Contexte : page ${location.href}`);
             addLog(`Contexte : origine « ${location.origin} » — le stockage local (et donc le jeton) est propre à cette origine ; une même app ouverte depuis une autre adresse ne voit pas le même jeton.`);
             addLog(`Contexte : navigateur ${navigator.userAgent}`);
-            addLog(`Réglages lus : propriétaire « ${cfg.owner || '(vide)'} », dépôt « ${cfg.repo || '(vide)'} », branche « ${cfg.branch} » fichier « ${cfg.path} ».`);
+            addLog(`Réglages lus : propriétaire « ${cfg.owner || '(vide)'} », dépôt « ${cfg.repo || '(vide)'} », branche « ${cfg.branch} », fichier « ${cfg.path} ».`);
             addLog(`Réglages lus : jeton depuis la clé « ${LS_TOKEN} » → ${maskToken(cfg.token)}`);
+            if (cfg.token) addLog(`Réglages lus : empreinte cryptographique du jeton de cette app = ${await tokenHash(cfg.token)}`);
             const anomalies = tokenAnomalies(cfg.rawToken);
             if (anomalies.length) addLog(`⚠ Anomalies détectées sur le jeton stocké : ${anomalies.join(' ; ')}.`);
             else addLog('Jeton stocké : aucune anomalie de forme détectée.');
-            logLocalStorageTokenInventory();
+            await logLocalStorageTokenInventory();
         }
 
         // Batterie complète de vérifications, déclenchée par le bouton
@@ -1458,7 +1573,7 @@
         async function runFullDiagnostic() {
             const cfg = getGhConfig();
             addLog('════════ DIAGNOSTIC COMPLET — début ════════');
-            logStartupDiagnostic();
+            await logStartupDiagnostic();
             setSyncStatus('⏳ Diagnostic en cours…', 'busy');
 
             if (!cfg.token) {
@@ -1474,6 +1589,7 @@
                 'X-GitHub-Api-Version': '2022-11-28'
             };
             let ok = 0, ko = 0;
+            let tokenRejected = false;
 
             // 1) Identité du jeton
             try {
@@ -1485,7 +1601,7 @@
                     const scopes = r.headers.get('x-oauth-scopes');
                     if (scopes === null) addLog('   ⓘ Aucun en-tête x-oauth-scopes : c\'est normal pour un jeton fine-grained (ses droits sont définis par dépôt et par permission, pas par « scopes »).');
                     else addLog(`   ⓘ Portées (scopes) du jeton classique : ${scopes === '' ? '(aucune — jeton sans droit)' : scopes}`);
-                } else { ko++; }
+                } else { ko++; tokenRejected = true; }
             } catch (e) { ko++; }
 
             // 2) Accès au dépôt de données
@@ -1539,6 +1655,11 @@
                     addLog('   ✓ L\'API GitHub est joignable sans jeton : le réseau et le navigateur ne sont donc pas en cause.');
                 } else { ko++; }
             } catch (e) { ko++; }
+
+            if (tokenRejected) {
+                addLog('⇒ Le jeton de cette application est refusé par GitHub. Test automatique de tous les autres jetons présents sur cet appareil, pour savoir si l\'un d\'eux fonctionne encore…');
+                await testAllStoredTokens(true);
+            }
 
             addLog(`Résultat : ${ok} vérification(s) réussie(s), ${ko} en échec. Utilisez le bouton « Copier » de cet onglet pour transmettre le journal.`);
             addLog('════════ DIAGNOSTIC COMPLET — fin ════════');
@@ -3339,10 +3460,15 @@
         // -------------------------------------------------------------
 
         initLog(); // restaure ou remet à zéro le journal local (max 24 h) avant toute opération
-        logStartupDiagnostic(); // trace immédiate : origine, réglages, empreinte du jeton, inventaire des jetons locaux
         fillSettingsFields();
         applyAppDataToUI(); // affichage immédiat avec les valeurs par défaut / cache local
-        loadFromGitHub();   // puis remplacement par les données GitHub si configuré
+        // Le diagnostic de démarrage calcule des empreintes (opération
+        // asynchrone) : on l'exécute AVANT le chargement GitHub pour que le
+        // journal reste lisible dans l'ordre.
+        (async () => {
+            await logStartupDiagnostic(); // origine, réglages, empreinte du jeton, inventaire des jetons locaux
+            await loadFromGitHub();       // puis remplacement par les données GitHub si configuré
+        })();
         initHeaderFields(); // restaure le champ 1 (local) et réinitialise le champ 2 à la date du jour
         highlightPasteCleanSendButton(); // mise en évidence au lancement de l'application
         {
