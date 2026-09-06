@@ -15,6 +15,14 @@
       "entrees": 13,
       "tokensDistincts": 1,
       "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 26_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/152.0.7977.64 Mo"
+    },
+    "iphone safari": {
+      "empreinte": "2d84e262",
+      "masque": "github_…X7Y9",
+      "date": "2026-09-06T11:03:11.380Z",
+      "entrees": 9,
+      "tokensDistincts": 1,
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15"
     }
   },
   "outil": "Changer mes tokens"
