@@ -872,6 +872,10 @@
                 <button class="btn-clear" data-tooltip="Lance une batterie de vérifications (jeton, dépôt, fichier, Gist, stockage local) et écrit tout le détail dans l'onglet Log." onclick="runFullDiagnostic()">🩺 Diagnostic complet</button>
                 <button class="btn-clear" data-tooltip="Teste un par un tous les jetons GitHub présents sur cet appareil et indique lequel est encore accepté pour ce dépôt." onclick="testAllStoredTokens(true)">🔑 Tester tous les jetons</button>
             </div>
+            <div class="button-group" style="margin-top:8px">
+                <button class="btn-add-combo" data-tooltip="Écrase le fichier de données du dépôt GitHub par le contenu enregistré sur cet appareil. À utiliser quand c'est cet appareil qui détient la bonne version." onclick="forcerLocalVersGitHub()">⬆️ Forcer : cet appareil → GitHub</button>
+                <button class="btn-add-combo" data-tooltip="Écrase les données de cet appareil par celles du dépôt GitHub. À utiliser quand c'est GitHub qui détient la bonne version." onclick="forcerGitHubVersLocal()">⬇️ Forcer : GitHub → cet appareil</button>
+            </div>
             <p style="font-size:11px;color:#718096;">Le jeton reste uniquement dans le stockage local de cet appareil ; il n'est jamais écrit dans le dépôt GitHub. Toutes les autres données de l'application (liste, instructions, contexte, contenu HTML) sont enregistrées dans le fichier ci-dessus du dépôt.</p>
         </div>
     </div>
@@ -1206,7 +1210,7 @@
     </div>
 
     <script>
-        const VERSION = "V71";
+        const VERSION = "V72";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1942,6 +1946,118 @@
                 setSyncStatus('✗ Échec sync : ' + err.message, 'error');
                 addLog(`✗ Échec de synchronisation vers GitHub (${cfg.owner}/${cfg.repo}, ${cfg.path}) : ${err.name} — ${err.message}.`);
                 addLog('   ⓘ Un échec en écriture alors que la lecture fonctionne indique presque toujours un jeton sans droit d\'écriture (Contents : Read and write) sur ce dépôt.');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // SYNCHRONISATION FORCÉE (V72)
+        // La synchronisation ordinaire est bidirectionnelle et automatique.
+        // Ces deux fonctions permettent de trancher explicitement quand les
+        // deux copies divergent : on choisit laquelle fait autorité, et
+        // l'autre est écrasée. Chaque étape est tracée dans le journal.
+        // -------------------------------------------------------------
+
+        // Taille lisible d'un objet de données, pour que l'utilisateur voie
+        // ce qu'il s'apprête à écraser.
+        function tailleDonnees(obj) {
+            try { return JSON.stringify(obj).length + ' caractères'; } catch (e) { return 'taille inconnue'; }
+        }
+
+        // Cet appareil fait autorité : le contenu enregistré localement
+        // écrase le fichier du dépôt GitHub.
+        async function forcerLocalVersGitHub() {
+            const cfg = getGhConfig();
+            addLog('════ FORCER : cet appareil → GitHub ════');
+            if (!ghConfigComplete(cfg)) {
+                setSyncStatus('⚠️ Configuration GitHub requise (Réglages)', 'warn');
+                addLog('Forçage abandonné : configuration GitHub incomplète.');
+                return;
+            }
+
+            // On part de ce qui est réellement stocké sur l'appareil ; à
+            // défaut, de l'état en mémoire.
+            let source = 'mémoire de l\'application';
+            let donnees = appData;
+            try {
+                const cache = localStorage.getItem(LS_LOCAL_CACHE);
+                if (cache) {
+                    donnees = Object.assign(defaultAppData(), JSON.parse(cache));
+                    source = `stockage local (clé « ${LS_LOCAL_CACHE} »)`;
+                }
+            } catch (e) {
+                addLog(`⚠ Stockage local illisible (${e.message}) → utilisation de l'état en mémoire.`);
+            }
+            addLog(`Source retenue : ${source} — ${tailleDonnees(donnees)}.`);
+
+            if (!confirm('Écraser les données du dépôt GitHub par celles de cet appareil ?\n\n'
+                + `Cible : ${cfg.owner}/${cfg.repo} — ${cfg.path}\n`
+                + 'Tout ce que le dépôt contient de plus récent sera perdu.')) {
+                addLog('Forçage annulé par l\'utilisateur.');
+                return;
+            }
+
+            clearTimeout(syncTimer); // une sync automatique en attente ne doit pas se superposer
+            setSyncStatus('⏳ Forçage vers GitHub…', 'busy');
+            try {
+                const actuel = await ghGetFile();
+                if (actuel.exists) addLog(`Version actuellement sur GitHub : ${tailleDonnees(actuel.data)}, sha ${String(actuel.sha).slice(0, 10)}… — elle va être remplacée.`);
+                else addLog('Aucun fichier sur GitHub : il va être créé.');
+                appData = donnees;
+                const newSha = await ghPutFile(appData, actuel.sha);
+                lastKnownSha = newSha;
+                saveLocalCache();
+                applyAppDataToUI();
+                setSyncStatus('✓ Dépôt écrasé par cet appareil ' + new Date().toLocaleTimeString('fr-FR'), 'ok');
+                addLog('✓ Forçage terminé : le dépôt GitHub reflète désormais les données de cet appareil.');
+                showToast('Dépôt GitHub mis à jour depuis cet appareil');
+            } catch (err) {
+                setSyncStatus('✗ Échec du forçage : ' + err.message, 'error');
+                addLog(`✗ Forçage vers GitHub échoué : ${err.name} — ${err.message}.`);
+            }
+        }
+
+        // GitHub fait autorité : le fichier du dépôt écrase le contenu
+        // enregistré sur cet appareil.
+        async function forcerGitHubVersLocal() {
+            const cfg = getGhConfig();
+            addLog('════ FORCER : GitHub → cet appareil ════');
+            if (!ghConfigComplete(cfg)) {
+                setSyncStatus('⚠️ Configuration GitHub requise (Réglages)', 'warn');
+                addLog('Forçage abandonné : configuration GitHub incomplète.');
+                return;
+            }
+
+            if (!confirm('Écraser les données de cet appareil par celles du dépôt GitHub ?\n\n'
+                + `Source : ${cfg.owner}/${cfg.repo} — ${cfg.path}\n`
+                + 'Toute modification faite ici et non encore synchronisée sera perdue.')) {
+                addLog('Forçage annulé par l\'utilisateur.');
+                return;
+            }
+
+            // Indispensable : sans cela, une synchronisation automatique
+            // déjà programmée renverrait aussitôt l'ancien contenu local
+            // vers GitHub, annulant la lecture qu'on vient de forcer.
+            clearTimeout(syncTimer);
+            addLog('Synchronisation automatique en attente annulée, pour ne pas réécrire par-dessus.');
+            setSyncStatus('⏳ Forçage depuis GitHub…', 'busy');
+            try {
+                addLog(`État local avant écrasement : ${tailleDonnees(appData)}.`);
+                const result = await ghGetFile();
+                if (!result.exists) {
+                    setSyncStatus('✗ Aucun fichier sur GitHub', 'error');
+                    addLog('✗ Forçage impossible : le fichier n\'existe pas dans le dépôt. Les données locales sont conservées.');
+                    return;
+                }
+                appData = Object.assign(defaultAppData(), result.data);
+                lastKnownSha = result.sha;
+                saveLocalCache();
+                applyAppDataToUI();
+                setSyncStatus('✓ Appareil rechargé depuis GitHub ' + new Date().toLocaleTimeString('fr-FR'), 'ok');
+                addLog(`✓ Forçage terminé : toutes les zones proviennent désormais du dépôt (${tailleDonnees(appData)}).`);
+                showToast('Données rechargées depuis GitHub');
+            } catch (err) {
+                setSyncStatus('✗ Échec du forçage : ' + err.message, 'error');
+                addLog(`✗ Forçage depuis GitHub échoué : ${err.name} — ${err.message} — les données locales sont inchangées.`);
             }
         }
 
