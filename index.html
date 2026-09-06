@@ -1210,7 +1210,7 @@
     </div>
 
     <script>
-        const VERSION = "V72";
+        const VERSION = "V73";
         document.getElementById('versionBadge').textContent = VERSION;
 
         const customSelect = document.getElementById('customSelect');
@@ -1949,6 +1949,36 @@
             }
         }
 
+        // Récupère les saisies encore à l'écran mais pas encore validées.
+        // Les zones d'instructions et de modèle n'enregistrent leur contenu
+        // qu'au moment où elles perdent le focus, après confirmation : un
+        // texte tapé puis laissé tel quel n'existe qu'à l'écran. Avant tout
+        // envoi forcé, on le récupère explicitement.
+        function recupererSaisiesEnCours() {
+            const recuperes = [];
+            const cleInstr = customSelect.value;
+            if (cleInstr && promptText.value !== (appData.promptsMap[cleInstr] || '')) {
+                recuperes.push({
+                    quoi: `instructions de « ${cleInstr} »`,
+                    appliquer: () => {
+                        appData.promptsMap[cleInstr] = promptText.value;
+                        lastPromptText = promptText.value;
+                    }
+                });
+            }
+            const cleModele = formatSelect.value;
+            if (cleModele && formatZone1.value !== (appData.formatPromptsMap[cleModele] || '')) {
+                recuperes.push({
+                    quoi: `modèle de « ${cleModele} »`,
+                    appliquer: () => {
+                        appData.formatPromptsMap[cleModele] = formatZone1.value;
+                        lastFormatZone1Text = formatZone1.value;
+                    }
+                });
+            }
+            return recuperes;
+        }
+
         // -------------------------------------------------------------
         // SYNCHRONISATION FORCÉE (V72)
         // La synchronisation ordinaire est bidirectionnelle et automatique.
@@ -1963,6 +1993,17 @@
             try { return JSON.stringify(obj).length + ' caractères'; } catch (e) { return 'taille inconnue'; }
         }
 
+        // Détail de ce que contiennent des données : c'est ce qui permet de
+        // voir tout de suite si un jeu d'instructions manque à l'appel.
+        function resumeDonnees(obj) {
+            if (!obj) return '(aucune donnée)';
+            const instr = Object.keys(obj.promptsMap || {});
+            const modeles = Object.keys(obj.formatPromptsMap || {});
+            return `${instr.length} jeu(x) d'instructions [${instr.join(', ') || 'aucun'}], `
+                + `${modeles.length} modèle(s) [${modeles.join(', ') || 'aucun'}], `
+                + `contexte ${(obj.context || '').length} car., HTML ${(obj.htmlSource || '').length} car.`;
+        }
+
         // Cet appareil fait autorité : le contenu enregistré localement
         // écrase le fichier du dépôt GitHub.
         async function forcerLocalVersGitHub() {
@@ -1972,6 +2013,23 @@
                 setSyncStatus('⚠️ Configuration GitHub requise (Réglages)', 'warn');
                 addLog('Forçage abandonné : configuration GitHub incomplète.');
                 return;
+            }
+
+            // Une saisie encore à l'écran n'est pas dans les données : on la
+            // récupère avant d'envoyer, sinon le forçage publierait une
+            // version amputée de ce que l'utilisateur vient d'écrire.
+            const enAttente = recupererSaisiesEnCours();
+            if (enAttente.length) {
+                const liste = enAttente.map(r => '• ' + r.quoi).join('\n');
+                addLog(`⚠ Saisie(s) non encore enregistrée(s) détectée(s) : ${enAttente.map(r => r.quoi).join(' ; ')}.`);
+                if (confirm('Des modifications sont affichées à l\'écran mais pas encore enregistrées :\n\n'
+                    + liste + '\n\nLes inclure dans l\'envoi vers GitHub ?')) {
+                    enAttente.forEach(r => r.appliquer());
+                    saveLocalCache();
+                    addLog('Saisie(s) en cours intégrée(s) aux données avant envoi.');
+                } else {
+                    addLog('Saisie(s) en cours volontairement écartée(s) de l\'envoi.');
+                }
             }
 
             // On part de ce qui est réellement stocké sur l'appareil ; à
@@ -1988,6 +2046,7 @@
                 addLog(`⚠ Stockage local illisible (${e.message}) → utilisation de l'état en mémoire.`);
             }
             addLog(`Source retenue : ${source} — ${tailleDonnees(donnees)}.`);
+            addLog(`Contenu envoyé : ${resumeDonnees(donnees)}`);
 
             if (!confirm('Écraser les données du dépôt GitHub par celles de cet appareil ?\n\n'
                 + `Cible : ${cfg.owner}/${cfg.repo} — ${cfg.path}\n`
@@ -2000,7 +2059,10 @@
             setSyncStatus('⏳ Forçage vers GitHub…', 'busy');
             try {
                 const actuel = await ghGetFile();
-                if (actuel.exists) addLog(`Version actuellement sur GitHub : ${tailleDonnees(actuel.data)}, sha ${String(actuel.sha).slice(0, 10)}… — elle va être remplacée.`);
+                if (actuel.exists) {
+                    addLog(`Version actuellement sur GitHub : ${tailleDonnees(actuel.sha ? actuel.data : null)}, sha ${String(actuel.sha).slice(0, 10)}… — elle va être remplacée.`);
+                    addLog(`Contenu remplacé : ${resumeDonnees(actuel.data)}`);
+                }
                 else addLog('Aucun fichier sur GitHub : il va être créé.');
                 appData = donnees;
                 const newSha = await ghPutFile(appData, actuel.sha);
@@ -2041,7 +2103,7 @@
             addLog('Synchronisation automatique en attente annulée, pour ne pas réécrire par-dessus.');
             setSyncStatus('⏳ Forçage depuis GitHub…', 'busy');
             try {
-                addLog(`État local avant écrasement : ${tailleDonnees(appData)}.`);
+                addLog(`État local avant écrasement : ${tailleDonnees(appData)} — ${resumeDonnees(appData)}`);
                 const result = await ghGetFile();
                 if (!result.exists) {
                     setSyncStatus('✗ Aucun fichier sur GitHub', 'error');
@@ -2054,6 +2116,7 @@
                 applyAppDataToUI();
                 setSyncStatus('✓ Appareil rechargé depuis GitHub ' + new Date().toLocaleTimeString('fr-FR'), 'ok');
                 addLog(`✓ Forçage terminé : toutes les zones proviennent désormais du dépôt (${tailleDonnees(appData)}).`);
+                addLog(`Contenu reçu : ${resumeDonnees(appData)}`);
                 showToast('Données rechargées depuis GitHub');
             } catch (err) {
                 setSyncStatus('✗ Échec du forçage : ' + err.message, 'error');
