@@ -35,5 +35,7 @@
     "Trang",
     "Yến"
   ],
-  "headerTypeSelectedValue": "Yến"
+  "headerTypeSelectedValue": "Yến",
+  "assistant": "gemini",
+  "geminiModel": "gemini-2.5-flash"
 }
