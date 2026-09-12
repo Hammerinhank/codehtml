@@ -902,6 +902,7 @@
 
         body[data-active-tab="reglages"] #sectionSettings { display: block; }
         body[data-active-tab="reglages"] #tabPanelHtmlTool { display: flex; }
+        body[data-active-tab="parametrage"] #tabPanelAssistant { display: flex; }
         body[data-active-tab="parametrage"] #tabPanelParametrage { display: flex; }
         body[data-active-tab="travail"] #tabPanelTravail { display: flex; }
         body[data-active-tab="log"] #tabPanelLog { display: flex; }
@@ -1035,9 +1036,9 @@
     <div class="collapsible-zone" data-tab="parametrage" id="tabPanelAssistant">
         <div class="zone-title-bar" onclick="toggleZone('zoneAssistant')">
             <h2>🤖 Assistant utilisé pour le traitement</h2>
-            <span class="zone-arrow" id="zoneAssistantArrow">▸</span>
+            <span class="zone-arrow" id="zoneAssistantArrow">▾</span>
         </div>
-        <div class="zone-content closed" id="zoneAssistantContent">
+        <div class="zone-content" id="zoneAssistantContent">
 
     <div class="param-group">
         <div class="combo-section">
@@ -1412,12 +1413,20 @@
     </div>
 
     <script>
-        const VERSION = "V74";
+        const VERSION = "V75";
         document.getElementById('versionBadge').textContent = VERSION;
 
         // Historique des versions, affiché en cliquant sur le badge.
         // Une entrée par version, en quelques lignes.
         const HISTORIQUE_VERSIONS = [
+            {
+                version: "V75",
+                date: "septembre 2026",
+                notes: [
+                    "Correction : la zone « Assistant utilisé pour le traitement » n'apparaissait pas dans l'onglet Paramètres — il manquait sa règle d'affichage d'onglet (chaque panneau doit être nommé explicitement en CSS).",
+                    "Cette zone est désormais dépliée d'office, en tête de l'onglet Paramètres."
+                ]
+            },
             {
                 version: "V74",
                 date: "septembre 2026",
