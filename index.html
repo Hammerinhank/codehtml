@@ -429,7 +429,7 @@
             visibility: hidden;
         }
 
-        /* Badge de version, bien visible */
+        /* Badge de version, bien visible — bouton ouvrant l'historique */
         #versionBadge {
             position: fixed;
             top: max(8px, env(safe-area-inset-top));
@@ -440,10 +440,150 @@
             font-weight: 700;
             font-family: "SF Mono", "Courier New", Courier, monospace;
             padding: 5px 11px;
+            border: 0;
             border-radius: 999px;
             z-index: 10001;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
             letter-spacing: 0.5px;
+            cursor: pointer;
+        }
+
+        #versionBadge:hover {
+            background: linear-gradient(135deg, var(--blue-darker), var(--ink));
+        }
+
+        /* Historique des versions (ouvert par un clic sur le badge) */
+        .version-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 10002;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 14px;
+            overflow-y: auto;
+        }
+
+        .version-overlay.show {
+            display: flex;
+        }
+
+        .version-modal {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card-hover);
+            max-width: 640px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .version-modal-head {
+            background: linear-gradient(135deg, #2d3748, #1a202c);
+            color: #fff;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .version-modal-head h2 {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .version-modal-head button {
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+            border: 0;
+            border-radius: var(--radius-sm);
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .version-modal-body {
+            padding: 14px 16px;
+            max-height: 65vh;
+            overflow-y: auto;
+            font-size: 13.5px;
+            line-height: 1.5;
+        }
+
+        .version-entry {
+            padding: 9px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .version-entry:last-child {
+            border-bottom: none;
+        }
+
+        .version-entry strong {
+            color: var(--blue-darker);
+            font-family: "SF Mono", "Courier New", Courier, monospace;
+        }
+
+        /* Choix de l'assistant : ce qui n'a de sens que dans un seul mode.
+           Une classe posée sur <body> l'emporte sur les règles d'affichage
+           propres à chaque bouton. */
+        body.ia-gemini .presse-papier-seul { display: none !important; }
+        body:not(.ia-gemini) .gemini-seul { display: none !important; }
+
+        .ia-choice-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .ia-choice-row label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--slate);
+            flex: 1 1 190px;
+        }
+
+        .ia-choice-row select,
+        .ia-choice-row input[type="password"],
+        .ia-choice-row input[type="text"] {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .ia-key-wrap {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .ia-key-wrap button {
+            flex: 0 0 auto;
+            padding: 7px 10px;
+        }
+
+        .ia-status {
+            margin-top: 10px;
+            font-size: 12.5px;
+            color: #718096;
+        }
+
+        .ia-status.error {
+            color: var(--red-dark);
+            font-weight: 600;
+        }
+
+        .ia-status.busy {
+            color: var(--blue-dark);
+            font-weight: 600;
         }
 
         /* Section Réglages GitHub */
@@ -835,7 +975,18 @@
         <button type="button" class="tab-btn" data-tab-target="reglages" onclick="switchTab('reglages')"><span class="tab-icon">⚙️</span>Réglages</button>
     </nav>
 
-    <div id="versionBadge">V1</div>
+    <button type="button" id="versionBadge" data-tooltip="Affiche l'historique des versions de l'application." onclick="ouvrirHistoriqueVersions()">V1</button>
+
+    <!-- HISTORIQUE DES VERSIONS (ouvert par le badge de version) -->
+    <div class="version-overlay" id="versionOverlay" onclick="if(event.target===this) fermerHistoriqueVersions()">
+        <div class="version-modal">
+            <div class="version-modal-head">
+                <h2>🗂️ Historique des versions</h2>
+                <button type="button" onclick="fermerHistoriqueVersions()">Fermer ✕</button>
+            </div>
+            <div class="version-modal-body" id="versionHistoryBody"></div>
+        </div>
+    </div>
 
     <iframe id="renderHost"></iframe>
 
@@ -877,6 +1028,51 @@
                 <button class="btn-add-combo" data-tooltip="Écrase les données de cet appareil par celles du dépôt GitHub. À utiliser quand c'est GitHub qui détient la bonne version." onclick="forcerGitHubVersLocal()">⬇️ Forcer : GitHub → cet appareil</button>
             </div>
             <p style="font-size:11px;color:#718096;">Le jeton reste uniquement dans le stockage local de cet appareil ; il n'est jamais écrit dans le dépôt GitHub. Toutes les autres données de l'application (liste, instructions, contexte, contenu HTML) sont enregistrées dans le fichier ci-dessus du dépôt.</p>
+        </div>
+    </div>
+
+    <!-- ZONE REPLIABLE : CHOIX DE L'ASSISTANT IA (ChatGPT ou Gemini) -->
+    <div class="collapsible-zone" data-tab="parametrage" id="tabPanelAssistant">
+        <div class="zone-title-bar" onclick="toggleZone('zoneAssistant')">
+            <h2>🤖 Assistant utilisé pour le traitement</h2>
+            <span class="zone-arrow" id="zoneAssistantArrow">▸</span>
+        </div>
+        <div class="zone-content closed" id="zoneAssistantContent">
+
+    <div class="param-group">
+        <div class="combo-section">
+            <div class="ia-choice-row">
+                <label>Assistant
+                    <select id="assistantSelect" data-tooltip="ChatGPT : la requête part dans un nouvel onglet et la réponse est récupérée par le presse-papier. Gemini : la réponse revient directement dans l'application." onchange="changerAssistant()">
+                        <option value="chatgpt">ChatGPT (onglet + presse-papier)</option>
+                        <option value="gemini">Gemini (réponse directe dans l'app)</option>
+                    </select>
+                </label>
+                <label class="gemini-seul">Modèle Gemini
+                    <select id="geminiModelSelect" data-tooltip="gemini-2.5-flash est le plus rapide, gemini-2.5-pro est plus fin mais plus lent." onchange="changerModeleGemini()">
+                        <option value="gemini-2.5-flash">gemini-2.5-flash (rapide, défaut)</option>
+                        <option value="gemini-2.5-pro">gemini-2.5-pro (plus fin, plus lent)</option>
+                        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                    </select>
+                </label>
+            </div>
+            <div class="ia-choice-row gemini-seul" style="margin-top:10px;">
+                <label>Clé API Gemini (cet appareil uniquement)
+                    <span class="ia-key-wrap">
+                        <input type="password" id="geminiKeyInput" placeholder="AIza..." autocomplete="off" data-tooltip="Clé API Google AI Studio. Elle reste dans le stockage local de cet appareil et n'est jamais écrite dans le dépôt GitHub." onchange="enregistrerCleGemini()">
+                        <button type="button" class="btn-toggle-fs" data-tooltip="Affiche ou masque la clé saisie." onclick="basculerVisibiliteCleGemini()">👁</button>
+                        <button type="button" class="btn-add-combo" data-tooltip="Enregistre la clé dans le stockage local de cet appareil." onclick="enregistrerCleGemini(true)">Enregistrer la clé</button>
+                    </span>
+                </label>
+            </div>
+            <div class="zone-desc" style="border-bottom:none;">
+                Le choix de l'assistant et le modèle sont enregistrés sur GitHub et suivent d'un appareil à l'autre.
+                <strong>La clé API, elle, reste dans le stockage local de cet appareil</strong> (elle serait autrement publiée dans le dépôt) : elle est à saisir une fois sur l'iMac et une fois sur l'iPhone. Elle est partagée avec les autres applications servies depuis la même adresse (clé de stockage <code>gemini_api_key</code>).
+            </div>
+            <div class="ia-status" id="geminiStatus"></div>
+        </div>
+    </div>
+
         </div>
     </div>
 
@@ -982,7 +1178,7 @@
 
     <!-- BOUTON COLLAGE RAPIDE + BASCULE DE LA ZONE PRÉPARATION -->
     <div class="action-row">
-        <button class="btn-paste btn-flex" id="btnPasteCleanSend" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis déclenche « Envoyer vers ChatGPT »." onclick="pasteCleanAndSend()">Coller, nettoyer et envoyer vers ChatGPT</button>
+        <button class="btn-paste btn-flex" id="btnPasteCleanSend" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis lance le traitement avec l'assistant choisi dans l'onglet Paramètres." onclick="lancerTraitementPrincipal()">Coller, nettoyer et envoyer vers ChatGPT</button>
         <div class="zone-title-bar zone-toggle-compact" onclick="toggleZone('zoneBefore')" data-tooltip="Afficher / masquer le détail : Instructions, Contexte…">
             <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
         </div>
@@ -1002,7 +1198,7 @@
                 <button class="btn-cleanup" data-tooltip="Retire les lignes vides, les lignes qui ne sont qu'une heure (ex: 10:03), les lignes contenant « http », et les lignes contenant les noms/mentions de la liste de filtrage." onclick="cleanupConversation()">Nettoyer conversation</button>
                 <button class="btn-toggle-fs" data-tooltip="Agrandit cette zone en plein écran (ou double-tap/double-clic sur le titre)." onclick="toggleFullscreen('sectionContext')">Plein écran</button>
                 <button data-tooltip="Copie le contenu de la zone Contexte dans le presse-papier." onclick="copyContextText()">Copier</button>
-                <button class="btn-chatgpt" id="btnSendChatGPT" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis ouvre ChatGPT dans un nouvel onglet avec les Instructions puis le Contexte pré-remplis dans la requête." onclick="sendToChatGPT()">Envoyer vers ChatGPT</button>
+                <button class="btn-chatgpt" id="btnSendChatGPT" data-tooltip="Nettoie automatiquement le Contexte (comme « Nettoyer conversation »), puis envoie Instructions + Contexte à l'assistant choisi dans l'onglet Paramètres." onclick="envoyerVersAssistant()">Envoyer vers ChatGPT</button>
             </div>
         </div>
         <div class="zone-desc">Contenu ou données à traiter (ex : export d'une conversation). Ce texte est envoyé après les instructions vers ChatGPT, et peut être nettoyé automatiquement avant l'envoi.</div>
@@ -1014,7 +1210,7 @@
 
     <!-- BOUTON COLLAGE RAPIDE VERS LA ZONE 4 + BASCULE DE LA ZONE MISE EN FORME -->
     <div class="action-row">
-        <button class="btn-paste btn-flex" id="btnPasteResult" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 7 dans le presse-papier." onclick="pasteAndCopyRendered()">Mettre en forme le résultat issu de ChatGPT</button>
+        <button class="btn-paste btn-flex presse-papier-seul" id="btnPasteResult" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 4 (Texte), déclenche automatiquement « Aérer + Hyperliens → Zones 5-6 », puis copie le rendu de la zone 7 dans le presse-papier." onclick="pasteAndCopyRendered()">Mettre en forme le résultat issu de ChatGPT</button>
         <div class="zone-title-bar zone-toggle-compact" onclick="toggleZone('zoneFormat')" data-tooltip="Afficher / masquer le détail : Mise en forme…">
             <span class="zone-arrow" id="zoneFormatArrow">▸</span>
         </div>
@@ -1103,13 +1299,19 @@
         <p>Vos réglages (listes, instructions, modèles, zones de texte) sont enregistrés sur GitHub et retrouvés sur tous vos appareils. Le journal des opérations reste sur cet appareil et se vide chaque jour.</p>
 
         <h3>2. Comment l'utiliser</h3>
-        <ol>
+        <ol class="presse-papier-seul">
             <li>En haut de cet onglet, choisissez le <strong>type</strong> dans le petit menu et vérifiez la <strong>date</strong> (pré-remplie au jour même).</li>
             <li>Copiez la conversation à traiter, puis appuyez sur <strong>« Coller, nettoyer et envoyer vers ChatGPT »</strong> : un onglet ChatGPT s'ouvre avec la requête complète.</li>
             <li>Dans ChatGPT, <strong>copiez la réponse</strong> obtenue.</li>
             <li>Revenez ici et appuyez sur <strong>« Mettre en forme le résultat issu de ChatGPT »</strong> (le bouton mis en évidence en vert) : le résultat final est aussitôt dans le presse-papier.</li>
             <li><strong>Collez</strong> ce résultat dans votre page Google Sites.</li>
         </ol>
+        <ol class="gemini-seul">
+            <li>En haut de cet onglet, choisissez le <strong>type</strong> dans le petit menu et vérifiez la <strong>date</strong> (pré-remplie au jour même).</li>
+            <li>Copiez la conversation à traiter, puis appuyez sur <strong>« Coller, nettoyer et traiter avec Gemini »</strong> : la question part par l'API, la réponse revient dans l'application et la mise en forme s'enchaîne toute seule. Au bout de quelques secondes, le résultat final est dans le presse-papier.</li>
+            <li><strong>Collez</strong> ce résultat dans votre page Google Sites.</li>
+        </ol>
+        <p class="gemini-seul"><strong>Mode Gemini :</strong> aucune copie manuelle n'est nécessaire, le bouton « Mettre en forme le résultat issu de ChatGPT » est donc masqué. La clé API est à saisir une fois par appareil dans l'onglet <strong>Paramètres</strong> ; en cas d'échec, la cause exacte renvoyée par Google s'affiche et aucune zone n'est modifiée.</p>
 
         <div class="help-tip">
             <strong>Repères utiles :</strong> les flèches bleues ▸ à droite des deux boutons ouvrent le détail (Contexte, Texte, Résultat, Aperçu, En-tête) si vous voulez vérifier ou retoucher. Un appui long de 2 s sur un bouton affiche son explication ; un double-tap sur le titre d'une zone la passe en plein écran. L'onglet <strong>Paramètres</strong> contient les instructions et modèles envoyés à ChatGPT, l'onglet <strong>Réglages</strong> la connexion GitHub, et l'onglet <strong>Log</strong> la trace des opérations.
@@ -1210,8 +1412,51 @@
     </div>
 
     <script>
-        const VERSION = "V73";
+        const VERSION = "V74";
         document.getElementById('versionBadge').textContent = VERSION;
+
+        // Historique des versions, affiché en cliquant sur le badge.
+        // Une entrée par version, en quelques lignes.
+        const HISTORIQUE_VERSIONS = [
+            {
+                version: "V74",
+                date: "septembre 2026",
+                notes: [
+                    "Choix de l'assistant dans l'onglet Paramètres : ChatGPT (inchangé) ou Gemini.",
+                    "En mode Gemini, la réponse revient directement dans l'application : un seul clic enchaîne collage, nettoyage, appel de l'API, aération, hyperliens, zone 7 et copie du résultat dans le presse-papier.",
+                    "Le bouton « Mettre en forme le résultat issu de ChatGPT » est masqué en mode Gemini (il n'a plus d'objet).",
+                    "Clé API Gemini dans le stockage local de l'appareil uniquement (gemini_api_key) ; assistant et modèle synchronisés sur GitHub.",
+                    "Badge de version devenu cliquable : il ouvre cet historique."
+                ]
+            },
+            {
+                version: "V73 et antérieures",
+                date: "jusqu'en août 2026",
+                notes: [
+                    "Parcours ChatGPT complet : collage, nettoyage de conversation, envoi dans un onglet, mise en forme du résultat (aération, hyperliens, en-têtes Memo A2 / Conversation), copie du rendu.",
+                    "Persistance des données sur GitHub, journal des opérations, onglets Travail / Paramètres / Log / Réglages, diagnostic des jetons.",
+                    "Détail non repris ici : l'historique n'a été mis en place qu'à la V74."
+                ]
+            }
+        ];
+
+        function ouvrirHistoriqueVersions() {
+            const corps = document.getElementById('versionHistoryBody');
+            corps.innerHTML = HISTORIQUE_VERSIONS.map(v =>
+                `<div class="version-entry"><strong>${v.version}</strong> — ${v.date}<ul style="margin:6px 0 0 18px;">`
+                + v.notes.map(n => `<li>${n}</li>`).join('')
+                + `</ul></div>`
+            ).join('');
+            document.getElementById('versionOverlay').classList.add('show');
+        }
+
+        function fermerHistoriqueVersions() {
+            document.getElementById('versionOverlay').classList.remove('show');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fermerHistoriqueVersions();
+        });
 
         const customSelect = document.getElementById('customSelect');
         const promptText = document.getElementById('promptText');
@@ -1261,7 +1506,13 @@
                 formatZone4: '',
                 formatZone5: '',
                 headerTypeOptions: [],
-                headerTypeSelectedValue: ''
+                headerTypeSelectedValue: '',
+                // Assistant utilisé pour le traitement : 'chatgpt' (onglet +
+                // presse-papier) ou 'gemini' (réponse directe via l'API).
+                // Synchronisé sur GitHub comme le reste ; seule la clé API
+                // reste locale à l'appareil.
+                assistant: 'chatgpt',
+                geminiModel: 'gemini-2.5-flash'
             };
         }
 
@@ -2145,6 +2396,7 @@
             formatZone5.innerHTML = appData.formatZone5 || '';
             if (!appData.headerTypeOptions) appData.headerTypeOptions = [];
             renderHeaderTypeSelectOptions();
+            appliquerChoixAssistant();
         }
 
         // -------------------------------------------------------------
@@ -2620,6 +2872,14 @@
         async function pasteAndCopyRendered() {
             const pasted = await pasteToFormatZone2();
             if (!pasted) return;
+            await finaliserMiseEnForme();
+        }
+
+        // Suite du traitement à partir du texte présent en zone 4, quelle que
+        // soit son origine : collage du presse-papier (mode ChatGPT) ou
+        // réponse renvoyée par l'API (mode Gemini). Le contenu produit est
+        // strictement le même dans les deux cas.
+        async function finaliserMiseEnForme() {
             aererSectionsFormat();
 
             const zone6Content = formatZone4.innerHTML;
@@ -2656,7 +2916,7 @@
                     pasteResultMessage.classList.remove('show');
                     pasteResultMessage.textContent = '';
                 }
-                addLog('Rappel (15 s après « Mettre en forme le résultat issu de ChatGPT ») : mise en évidence du bouton "Coller, nettoyer et envoyer vers ChatGPT" et effacement du message.');
+                addLog('Rappel (15 s après la fin de la mise en forme) : mise en évidence du bouton principal de l\'onglet Travail et effacement du message.');
             }, 15000);
 
             // Dernière étape du traitement : ajoute une ligne "SECTION - ..."
@@ -3054,6 +3314,273 @@
             scheduleSync();
             showToast(`Conversation nettoyée ! (${lines.length - cleanedLines.length} ligne(s) retirée(s))`);
             addLog(`Nettoyage : zone 2 (Contexte) → zone 2 mise à jour (${lines.length - cleanedLines.length} ligne(s) vide(s)/horodatages/mentions retirée(s) sur ${lines.length}).`);
+        }
+
+        // -------------------------------------------------------------
+        // ASSISTANT IA : CHOIX CHATGPT / GEMINI (V74)
+        //
+        // ChatGPT : parcours inchangé — la requête part dans un onglet et la
+        // réponse revient par le presse-papier.
+        // Gemini : la requête part par l'API depuis cette page et la réponse
+        // est injectée directement là où arrivait le texte collé (zone 4),
+        // puis la suite du traitement est strictement la même.
+        // -------------------------------------------------------------
+
+        // Toutes les applications servies depuis la même origine partagent ce
+        // stockage : la clé saisie ici sert aussi aux autres.
+        const LS_GEMINI_KEY = 'gemini_api_key';
+        const ANCIENNES_CLES_GEMINI = ['geminiApiKey', 'gemini_key', 'GEMINI_API_KEY'];
+
+        // Reprise automatique d'une clé rangée sous un ancien nom, puis
+        // effacement de l'ancienne entrée.
+        (function migrerAncienneCleGemini() {
+            try {
+                if (localStorage.getItem(LS_GEMINI_KEY)) return;
+                for (const ancienne of ANCIENNES_CLES_GEMINI) {
+                    const valeur = localStorage.getItem(ancienne);
+                    if (valeur && valeur.trim()) {
+                        localStorage.setItem(LS_GEMINI_KEY, valeur.trim());
+                        localStorage.removeItem(ancienne);
+                        break;
+                    }
+                }
+            } catch (e) {}
+        })();
+
+        function lireCleGemini() {
+            try { return (localStorage.getItem(LS_GEMINI_KEY) || '').trim(); } catch (e) { return ''; }
+        }
+
+        function modeleGeminiCourant() {
+            return appData.geminiModel || 'gemini-2.5-flash';
+        }
+
+        function assistantCourant() {
+            return appData.assistant === 'gemini' ? 'gemini' : 'chatgpt';
+        }
+
+        function setGeminiStatus(message, kind) {
+            const el = document.getElementById('geminiStatus');
+            if (!el) return;
+            el.textContent = message || '';
+            el.className = 'ia-status' + (kind ? ' ' + kind : '');
+        }
+
+        // Message court affiché sous le bouton principal (même emplacement
+        // que le message « résultat prêt dans le presse-papier »).
+        function messageTraitement(texte, afficher) {
+            const el = document.getElementById('pasteResultMessage');
+            if (!el) return;
+            el.textContent = texte || '';
+            el.classList.toggle('show', !!afficher);
+        }
+
+        function enregistrerCleGemini(avecMessage) {
+            const champ = document.getElementById('geminiKeyInput');
+            const valeur = (champ.value || '').trim();
+            try {
+                if (valeur) localStorage.setItem(LS_GEMINI_KEY, valeur);
+                else localStorage.removeItem(LS_GEMINI_KEY);
+            } catch (e) {}
+            const apercu = valeur ? `${valeur.slice(0, 6)}…${valeur.slice(-4)} (longueur ${valeur.length})` : '(aucune)';
+            addLog(`Réglages : clé API Gemini enregistrée dans la clé localStorage « ${LS_GEMINI_KEY} » de cet appareil — ${apercu}.`);
+            setGeminiStatus(valeur ? `Clé enregistrée sur cet appareil (${apercu}).` : "Aucune clé sur cet appareil.", valeur ? '' : 'error');
+            if (avecMessage) showToast(valeur ? "Clé Gemini enregistrée !" : "Clé Gemini effacée");
+        }
+
+        function basculerVisibiliteCleGemini() {
+            const champ = document.getElementById('geminiKeyInput');
+            champ.type = champ.type === 'password' ? 'text' : 'password';
+        }
+
+        // Aligne l'interface sur le choix d'assistant : classe sur <body>
+        // (qui masque ce qui n'a plus d'objet), libellés des boutons, et
+        // valeurs des champs de réglage.
+        function appliquerChoixAssistant() {
+            const mode = assistantCourant();
+            document.body.classList.toggle('ia-gemini', mode === 'gemini');
+
+            const selAssistant = document.getElementById('assistantSelect');
+            if (selAssistant) selAssistant.value = mode;
+            const selModele = document.getElementById('geminiModelSelect');
+            if (selModele) selModele.value = modeleGeminiCourant();
+            const champCle = document.getElementById('geminiKeyInput');
+            if (champCle) {
+                champCle.value = lireCleGemini();
+                champCle.type = 'password';
+            }
+
+            const btnPrincipal = document.getElementById('btnPasteCleanSend');
+            if (btnPrincipal) {
+                btnPrincipal.textContent = mode === 'gemini'
+                    ? "Coller, nettoyer et traiter avec Gemini"
+                    : "Coller, nettoyer et envoyer vers ChatGPT";
+            }
+            const btnEnvoi = document.getElementById('btnSendChatGPT');
+            if (btnEnvoi) {
+                btnEnvoi.textContent = mode === 'gemini' ? "Traiter avec Gemini" : "Envoyer vers ChatGPT";
+            }
+
+            if (mode === 'gemini') {
+                setGeminiStatus(
+                    lireCleGemini()
+                        ? `Mode Gemini — modèle ${modeleGeminiCourant()}, clé présente sur cet appareil.`
+                        : "Mode Gemini — aucune clé API sur cet appareil : saisissez-la ci-dessus.",
+                    lireCleGemini() ? '' : 'error'
+                );
+            } else {
+                setGeminiStatus("Mode ChatGPT — parcours par onglet et presse-papier.");
+            }
+        }
+
+        function changerAssistant() {
+            const valeur = document.getElementById('assistantSelect').value === 'gemini' ? 'gemini' : 'chatgpt';
+            appData.assistant = valeur;
+            scheduleSync();
+            appliquerChoixAssistant();
+            addLog(`Réglages : assistant du traitement = ${valeur === 'gemini' ? 'Gemini (réponse directe par l\'API)' : 'ChatGPT (onglet + presse-papier)'} — enregistré et synchronisé sur GitHub.`);
+            showToast(valeur === 'gemini' ? "Mode Gemini activé" : "Mode ChatGPT activé");
+        }
+
+        function changerModeleGemini() {
+            appData.geminiModel = document.getElementById('geminiModelSelect').value;
+            scheduleSync();
+            appliquerChoixAssistant();
+            addLog(`Réglages : modèle Gemini = ${appData.geminiModel} — enregistré et synchronisé sur GitHub.`);
+        }
+
+        // Appel de l'API Gemini. dataUrlImage reste facultatif : l'application
+        // n'envoie aujourd'hui que du texte, mais le passage d'une photo est
+        // déjà prévu ici.
+        async function appelerGemini(question, dataUrlImage) {
+            const cleGemini = lireCleGemini();
+            if (!cleGemini) throw new Error("Aucune clé API Gemini sur cet appareil (onglet Paramètres)");
+
+            const parts = [];
+            if (question) parts.push({ text: question });
+            if (dataUrlImage) {
+                const decoupe = /^data:([^;]+);base64,(.*)$/.exec(dataUrlImage);
+                if (!decoupe) throw new Error("Photo au format inattendu");
+                // Gemini n'accepte que des types image/* : un type perdu en route est corrigé ici.
+                let typeImage = decoupe[1];
+                if (!typeImage.startsWith("image/")) typeImage = "image/jpeg";
+                parts.push({ inline_data: { mime_type: typeImage, data: decoupe[2] } });
+                addLog(`Gemini : image jointe — type ${typeImage}, ${Math.round(decoupe[2].length * 3 / 4 / 1024)} Ko environ.`);
+            }
+
+            const modele = modeleGeminiCourant();
+            const reponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modele}:generateContent?key=${encodeURIComponent(cleGemini)}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts }] })
+            });
+
+            let donnees = null;
+            try { donnees = await reponse.json(); } catch (e) { donnees = null; }
+            if (!reponse.ok) {
+                throw new Error(donnees?.error?.message || ("HTTP " + reponse.status));
+            }
+
+            let texte = "";
+            try { texte = (donnees.candidates[0].content.parts || []).map(p => p.text || "").join("").trim(); }
+            catch (e) { texte = ""; }
+            if (!texte) throw new Error("Réponse vide — " + JSON.stringify(donnees).slice(0, 300));
+            return texte;
+        }
+
+        // Requête envoyée à l'assistant : exactement celle composée pour
+        // ChatGPT (Instructions puis Contexte).
+        function construireRequeteIA() {
+            const part1 = promptText.value.trim();
+            const part2 = contextText.value.trim();
+            return part1 + (part1 && part2 ? "\n" : "") + part2;
+        }
+
+        // Explication lisible des refus les plus fréquents de l'API.
+        function expliquerErreurGemini(message) {
+            const m = (message || '').toLowerCase();
+            if (m.includes('referer')) return "La clé est restreinte par référent HTTP dans la console Google : autorisez l'adresse de cette page, ou levez la restriction.";
+            if (m.includes('api key not valid') || m.includes('api_key_invalid')) return "Clé absente ou erronée sur cet appareil (onglet Paramètres).";
+            if (m.includes('quota') || m.includes('resource_exhausted')) return "Quota de l'API atteint pour cette clé.";
+            if (m.includes('not found') || m.includes('is not found')) return `Le modèle « ${modeleGeminiCourant()} » n'est pas accessible avec cette clé : essayez un autre modèle.`;
+            return "";
+        }
+
+        // Traitement complet en mode Gemini : nettoyage, appel de l'API,
+        // injection de la réponse en zone 4, puis exactement la même suite
+        // que le bouton « Mettre en forme le résultat issu de ChatGPT ».
+        // En cas d'échec : message d'erreur exact, et rien d'autre n'est
+        // modifié (aucune zone effacée, aucun onglet ouvert).
+        async function traiterAvecGemini(collerDepuisPressePapier) {
+            if (collerDepuisPressePapier) {
+                const colle = await pasteToContext();
+                if (!colle) return;
+            }
+
+            if (contextText.value.trim() !== '') {
+                cleanupConversation();
+            }
+
+            const question = construireRequeteIA();
+            if (!question.trim()) {
+                showToast("Les fenêtres sont vides !");
+                return;
+            }
+
+            const boutons = [document.getElementById('btnPasteCleanSend'), document.getElementById('btnSendChatGPT')].filter(Boolean);
+            const libelles = boutons.map(b => b.textContent);
+            boutons.forEach(b => { b.disabled = true; b.textContent = "⏳ Gemini travaille…"; });
+            messageTraitement(`Requête envoyée à Gemini (${modeleGeminiCourant()}) — réponse en cours…`, true);
+            setGeminiStatus(`⏳ Appel de ${modeleGeminiCourant()} en cours…`, 'busy');
+            markWorkflowStep(1, true);
+            addLog(`Gemini : envoi zone 1 (Instructions) + zone 2 (Contexte) → API ${modeleGeminiCourant()} (${question.length} caractères, sans image).`);
+
+            const debut = Date.now();
+            let texte = null;
+            try {
+                texte = await appelerGemini(question, null);
+            } catch (err) {
+                const duree = ((Date.now() - debut) / 1000).toFixed(1);
+                const explication = expliquerErreurGemini(err.message);
+                addLog(`✗ Gemini : échec après ${duree} s — ${err.message}${explication ? ' — ' + explication : ''}. Aucune zone modifiée.`);
+                setGeminiStatus(`✗ Échec Gemini : ${err.message}${explication ? ' — ' + explication : ''}`, 'error');
+                messageTraitement(`✗ Échec Gemini : ${err.message}`, true);
+                showToast("Échec de l'appel à Gemini (voir Paramètres / Log)");
+                return;
+            } finally {
+                boutons.forEach((b, i) => { b.disabled = false; b.textContent = libelles[i]; });
+            }
+
+            const duree = ((Date.now() - debut) / 1000).toFixed(1);
+            addLog(`Gemini : réponse reçue en ${duree} s — ${texte.length} caractères. Début : « ${texte.slice(0, 120).replace(/\s+/g, ' ')} »`);
+            setGeminiStatus(`✓ Réponse de ${modeleGeminiCourant()} reçue en ${duree} s (${texte.length} caractères).`);
+
+            // La réponse prend la place du texte auparavant collé depuis le
+            // presse-papier : la suite du traitement est inchangée.
+            formatZone2.value = texte;
+            appData.formatZone2 = texte;
+            scheduleSync();
+            addLog("Gemini : réponse → zone 4 (Texte), là où arrivait le texte collé depuis le presse-papier.");
+
+            await finaliserMiseEnForme();
+        }
+
+        // Aiguillage du bouton « Envoyer » de la zone 2.
+        function envoyerVersAssistant() {
+            if (assistantCourant() === 'gemini') {
+                traiterAvecGemini(false);
+            } else {
+                sendToChatGPT();
+            }
+        }
+
+        // Aiguillage du bouton principal du haut de l'onglet Travail.
+        function lancerTraitementPrincipal() {
+            if (assistantCourant() === 'gemini') {
+                traiterAvecGemini(true);
+            } else {
+                pasteCleanAndSend();
+            }
         }
 
         // -------------------------------------------------------------
