@@ -36,6 +36,6 @@
     "Yến"
   ],
   "headerTypeSelectedValue": "Yến",
-  "assistant": "gemini",
+  "assistant": "chatgpt",
   "geminiModel": "gemini-2.5-flash"
 }
