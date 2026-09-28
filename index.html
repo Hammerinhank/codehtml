@@ -525,6 +525,108 @@
             font-family: "SF Mono", "Courier New", Courier, monospace;
         }
 
+        /* Fenêtre de confirmation personne + date avant l'envoi principal */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 10003;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 14px;
+        }
+
+        .confirm-overlay.show {
+            display: flex;
+        }
+
+        .confirm-modal {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card-hover);
+            max-width: 420px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .confirm-modal-head {
+            background: linear-gradient(135deg, var(--blue-dark), var(--blue-darker));
+            color: #fff;
+            padding: 12px 16px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .confirm-modal-body {
+            padding: 16px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .confirm-values {
+            margin: 12px 0 4px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px 12px;
+            align-items: baseline;
+        }
+
+        .confirm-values span.lbl {
+            color: #4a5568;
+            font-size: 13px;
+        }
+
+        .confirm-values span.val {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--blue-darker);
+            word-break: break-word;
+        }
+
+        .confirm-values span.val.vide {
+            color: #c53030;
+            font-size: 15px;
+            font-style: italic;
+        }
+
+        .confirm-warning {
+            margin-top: 10px;
+            padding: 8px 10px;
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: var(--radius-sm);
+            color: #c53030;
+            font-size: 13px;
+            display: none;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 10px;
+            padding: 0 16px 16px;
+        }
+
+        .confirm-actions button {
+            flex: 1;
+            padding: 12px 10px;
+            border: 0;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .confirm-actions .btn-annuler {
+            background: #edf2f7;
+            color: #2d3748;
+        }
+
+        .confirm-actions .btn-confirmer {
+            background: #38a169;
+            color: #fff;
+        }
+
         /* Choix de l'assistant : ce qui n'a de sens que dans un seul mode.
            Une classe posée sur <body> l'emporte sur les règles d'affichage
            propres à chaque bouton. */
@@ -989,6 +1091,25 @@
         </div>
     </div>
 
+    <!-- CONFIRMATION PERSONNE + DATE (avant « Coller, nettoyer et envoyer ») -->
+    <div class="confirm-overlay" id="confirmEnvoiOverlay" onclick="if(event.target===this) annulerEnvoiPrincipal()">
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmEnvoiTitre">
+            <div class="confirm-modal-head" id="confirmEnvoiTitre">✅ Vérifier avant l'envoi</div>
+            <div class="confirm-modal-body">
+                La requête va être préparée pour :
+                <div class="confirm-values">
+                    <span class="lbl">Personne</span><span class="val" id="confirmEnvoiPersonne"></span>
+                    <span class="lbl">Date</span><span class="val" id="confirmEnvoiDate"></span>
+                </div>
+                <div class="confirm-warning" id="confirmEnvoiAlerte"></div>
+            </div>
+            <div class="confirm-actions">
+                <button type="button" class="btn-annuler" onclick="annulerEnvoiPrincipal()">Annuler</button>
+                <button type="button" class="btn-confirmer" id="confirmEnvoiOk" onclick="confirmerEnvoiPrincipal()">C'est bon, continuer</button>
+            </div>
+        </div>
+    </div>
+
     <iframe id="renderHost"></iframe>
 
     <!-- SECTION RÉGLAGES GITHUB (persistance) -->
@@ -1179,7 +1300,7 @@
 
     <!-- BOUTON COLLAGE RAPIDE + BASCULE DE LA ZONE PRÉPARATION -->
     <div class="action-row">
-        <button class="btn-paste btn-flex" id="btnPasteCleanSend" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis lance le traitement avec l'assistant choisi dans l'onglet Paramètres." onclick="lancerTraitementPrincipal()">Coller, nettoyer et envoyer vers ChatGPT</button>
+        <button class="btn-paste btn-flex" id="btnPasteCleanSend" data-tooltip="Colle le contenu du presse-papier dans la fenêtre 2 (Données / Contexte), le nettoie automatiquement, puis lance le traitement avec l'assistant choisi dans l'onglet Paramètres." onclick="demanderConfirmationEnvoi()">Coller, nettoyer et envoyer vers ChatGPT</button>
         <div class="zone-title-bar zone-toggle-compact" onclick="toggleZone('zoneBefore')" data-tooltip="Afficher / masquer le détail : Instructions, Contexte…">
             <span class="zone-arrow" id="zoneBeforeArrow">▸</span>
         </div>
@@ -1413,12 +1534,21 @@
     </div>
 
     <script>
-        const VERSION = "V76";
+        const VERSION = "V77";
         document.getElementById('versionBadge').textContent = VERSION;
 
         // Historique des versions, affiché en cliquant sur le badge.
         // Une entrée par version, en quelques lignes.
         const HISTORIQUE_VERSIONS = [
+            {
+                version: "V77",
+                date: "septembre 2026",
+                notes: [
+                    "Clic sur « Coller, nettoyer et envoyer » : une fenêtre affiche la personne et la date choisies en haut et demande confirmation.",
+                    "Annuler : rien n'est lancé, retour au choix de la personne. Continuer : traitement inchangé (ChatGPT ou Gemini).",
+                    "Avertissement si la personne ou la date est vide."
+                ]
+            },
             {
                 version: "V76",
                 date: "septembre 2026",
@@ -3596,6 +3726,58 @@
                 sendToChatGPT();
             }
         }
+
+        // Confirmation de la personne et de la date (champs d'en-tête du
+        // haut de l'onglet Travail) avant de lancer le traitement principal.
+        function demanderConfirmationEnvoi() {
+            const personne = headerTypeField.value.trim();
+            const date = headerDateField.value.trim();
+
+            const elP = document.getElementById('confirmEnvoiPersonne');
+            const elD = document.getElementById('confirmEnvoiDate');
+            elP.textContent = personne || '(aucune personne choisie)';
+            elP.classList.toggle('vide', !personne);
+            elD.textContent = date || '(aucune date saisie)';
+            elD.classList.toggle('vide', !date);
+
+            const alerte = document.getElementById('confirmEnvoiAlerte');
+            if (!personne || !date) {
+                alerte.textContent = "⚠️ Un des deux champs est vide : annulez pour le compléter, ou continuez quand même.";
+                alerte.style.display = 'block';
+            } else {
+                alerte.style.display = 'none';
+            }
+
+            document.getElementById('confirmEnvoiOverlay').classList.add('show');
+            document.getElementById('confirmEnvoiOk').focus();
+            addLog(`Confirmation demandée avant envoi : « ${personne} : ${date} ».`);
+        }
+
+        function fenetreConfirmationOuverte() {
+            return document.getElementById('confirmEnvoiOverlay').classList.contains('show');
+        }
+
+        // Annuler : on ferme et on revient au point de départ (rien n'est lancé).
+        function annulerEnvoiPrincipal() {
+            document.getElementById('confirmEnvoiOverlay').classList.remove('show');
+            addLog("Envoi annulé à la confirmation : retour au choix de la personne et de la date.");
+            showToast("Envoi annulé — corrigez la personne ou la date.");
+            headerTypeField.focus();
+        }
+
+        // Confirmer : la suite est exactement celle d'avant. L'appel est fait
+        // directement dans le clic, ce qui garde l'autorisation de lecture du
+        // presse-papier (Safari/iPhone).
+        function confirmerEnvoiPrincipal() {
+            document.getElementById('confirmEnvoiOverlay').classList.remove('show');
+            addLog("Personne et date confirmées : lancement du traitement.");
+            lancerTraitementPrincipal();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!fenetreConfirmationOuverte()) return;
+            if (e.key === 'Escape') { e.preventDefault(); annulerEnvoiPrincipal(); }
+        });
 
         // Aiguillage du bouton principal du haut de l'onglet Travail.
         function lancerTraitementPrincipal() {
